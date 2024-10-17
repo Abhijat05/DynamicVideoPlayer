@@ -14,6 +14,7 @@ const volumeControl = document.getElementById('volumeControl');
 const fullscreenButton = document.getElementById('fullscreenButton');
 const currentVolume = document.getElementById('currentVolume');
 const themeToggle = document.getElementById('themeToggle');
+const fileInput = document.getElementById('fileInput');
 
 const videoFiles = [
     { src: './video/1.mp4', title: 'Video 1' },
@@ -25,12 +26,14 @@ const videoFiles = [
     { src: './video/7.mp4', title: 'Video 7' },
 ];
 
+
 videoFiles.forEach((video, index) => {
     const option = document.createElement('option');
     option.value = index;
     option.textContent = video.title;
     videoSelect.appendChild(option);
 });
+
 
 function loadVideo(index) {
     const selectedVideo = videoFiles[index];
@@ -42,7 +45,9 @@ function loadVideo(index) {
     loadingIndicator.style.display = 'none';
 }
 
+
 videoSelect.addEventListener('change', () => {
+    loadingIndicator.style.display = 'block';
     loadVideo(videoSelect.value);
 });
 
@@ -110,10 +115,38 @@ themeToggle.addEventListener('click', () => {
     container.classList.toggle('dark');
 });
 
-// Format time in mm:ss
+
+videoPlayer.addEventListener('error', () => {
+    loadingIndicator.style.display = 'none';
+    alert('Error loading video. Please check the format or try another video.');
+});
+
+
+videoPlayer.addEventListener('loadstart', () => {
+    loadingIndicator.style.display = 'block';
+});
+
+videoPlayer.addEventListener('loadeddata', () => {
+    loadingIndicator.style.display = 'none';
+});
+
+
+fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const fileURL = URL.createObjectURL(file);
+        videoSource.src = fileURL;
+        videoTitle.textContent = file.name; 
+        videoPlayer.load();
+        videoPlayer.play();
+        document.getElementById('videoContainer').style.display = 'block';
+        loadingIndicator.style.display = 'none';
+    }
+});
+
+
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
-
