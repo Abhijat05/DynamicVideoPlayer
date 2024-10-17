@@ -61,7 +61,7 @@ video {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 10px 0;
+    margin: 10px 15px;
     gap: 10px;
     flex-wrap: wrap;
 }
@@ -171,30 +171,38 @@ body.dark {
 
 @media (max-width: 600px) {
     .container {
-        padding: 50px;
+        padding: 20px;
         margin: 5px;
     }
 
     h1 {
         font-size: 1.5em;
+        margin-bottom: 15px;
     }
 
     .control-btn {
-        font-size: 16px;
-        padding: 8px 10px;
+        font-size: 14px;
+        padding: 8px;
         flex: 1;
+        min-width: 50px;
+        margin: 2px;
     }
 
     #timeDisplay {
-        font-size: 14px;
+        font-size: 12px;
+        margin-top: 5px;
     }
 
     select {
         font-size: 14px;
+        margin-top: 5px;
     }
 
     input[type="range"] {
         height: 5px;
     }
-}
 
+    #volumeContainer {
+        margin-top: 10px;
+    }
+}

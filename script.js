@@ -15,19 +15,26 @@ const fullscreenButton = document.getElementById('fullscreenButton');
 const currentVolume = document.getElementById('currentVolume');
 const themeToggle = document.getElementById('themeToggle');
 const fileInput = document.getElementById('fileInput');
+const rewindButton = document.getElementById('rewindButton'); // New button
+const fastForwardButton = document.getElementById('fastForwardButton'); // New button
 
 const videoFiles = [
-    { src: './exp.mp4', title: 'Video 1' },//add your own file
+    { src: './video/1.mp4', title: 'Video 1' },
+    { src: './video/2.mp4', title: 'Video 2' },
+    { src: './video/3.mp4', title: 'Video 3' },
+    { src: './video/4.mp4', title: 'Video 4' },
+    { src: './video/5.mp4', title: 'Video 5' },
+    { src: './video/6.mp4', title: 'Video 6' },
+    { src: './video/7.mp4', title: 'Video 7' },
 ];
 
-
+// Populate video selection dropdown
 videoFiles.forEach((video, index) => {
     const option = document.createElement('option');
     option.value = index;
     option.textContent = video.title;
     videoSelect.appendChild(option);
 });
-
 
 function loadVideo(index) {
     const selectedVideo = videoFiles[index];
@@ -39,7 +46,7 @@ function loadVideo(index) {
     loadingIndicator.style.display = 'none';
 }
 
-
+// Event Listeners
 videoSelect.addEventListener('change', () => {
     loadingIndicator.style.display = 'block';
     loadVideo(videoSelect.value);
@@ -93,6 +100,15 @@ prevButton.addEventListener('click', () => {
     loadVideo(newIndex);
 });
 
+// New functionality to rewind and fast forward
+rewindButton.addEventListener('click', () => {
+    videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10); // Decrease 10 seconds
+});
+
+fastForwardButton.addEventListener('click', () => {
+    videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10); // Increase 10 seconds
+});
+
 fullscreenButton.addEventListener('click', () => {
     if (!document.fullscreenElement) {
         videoPlayer.requestFullscreen();
@@ -109,12 +125,10 @@ themeToggle.addEventListener('click', () => {
     container.classList.toggle('dark');
 });
 
-
 videoPlayer.addEventListener('error', () => {
     loadingIndicator.style.display = 'none';
     alert('Error loading video. Please check the format or try another video.');
 });
-
 
 videoPlayer.addEventListener('loadstart', () => {
     loadingIndicator.style.display = 'block';
@@ -123,7 +137,6 @@ videoPlayer.addEventListener('loadstart', () => {
 videoPlayer.addEventListener('loadeddata', () => {
     loadingIndicator.style.display = 'none';
 });
-
 
 fileInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
@@ -137,7 +150,6 @@ fileInput.addEventListener('change', (event) => {
         loadingIndicator.style.display = 'none';
     }
 });
-
 
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
