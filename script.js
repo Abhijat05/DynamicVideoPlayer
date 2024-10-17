@@ -15,15 +15,15 @@ const fullscreenButton = document.getElementById('fullscreenButton');
 const currentVolume = document.getElementById('currentVolume');
 const themeToggle = document.getElementById('themeToggle');
 
-// const videoFiles = [
-//     { src: './video/1.mp4', title: 'Video 1' },
-//     { src: './video/2.mp4', title: 'Video 2' },
-//     { src: './video/3.mp4', title: 'Video 3' },
-//     { src: './video/4.mp4', title: 'Video 4' },
-//     { src: './video/5.mp4', title: 'Video 5' },
-//     { src: './video/6.mp4', title: 'Video 6' },
-//     { src: './video/7.mp4', title: 'Video 7' },
-// ];
+const videoFiles = [
+    { src: './video/1.mp4', title: 'Video 1' },
+    { src: './video/2.mp4', title: 'Video 2' },
+    { src: './video/3.mp4', title: 'Video 3' },
+    { src: './video/4.mp4', title: 'Video 4' },
+    { src: './video/5.mp4', title: 'Video 5' },
+    { src: './video/6.mp4', title: 'Video 6' },
+    { src: './video/7.mp4', title: 'Video 7' },
+];
 
 videoFiles.forEach((video, index) => {
     const option = document.createElement('option');

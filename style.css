@@ -3,9 +3,9 @@
 }
 
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Poppins', sans-serif; /* Updated font */
     background: linear-gradient(135deg, #1e1e2f, #4b4b69);
-    color: #ffffff;
+    color: #e5e5e5; /* Light text color for readability */
     text-align: center;
     padding: 20px;
     margin: 0;
@@ -14,7 +14,7 @@ body {
 .container {
     max-width: 800px;
     margin: auto;
-    background: #2c2c2c;
+    background: #2c2c2c; /* Darker container background */
     border-radius: 15px;
     padding: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
@@ -28,6 +28,7 @@ body {
 h1 {
     color: #e5e5e5;
     margin-bottom: 20px;
+    font-weight: 700; /* Bold title */
 }
 
 #videoSelectContainer {
@@ -41,19 +42,14 @@ select {
     border: 1px solid #555;
     background: #444;
     color: #fff;
-    transition: background-color 0.3s ease;
-}
-
-select:hover {
-    background: #555;
+    font-family: 'Poppins', sans-serif; /* Updated font */
 }
 
 .video-card {
     border-radius: 15px;
     padding: 10px;
-    background: #3a3a3a;
+    background: #3a3a3a; /* Consistent dark background */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    position: relative;
 }
 
 video {
@@ -73,39 +69,16 @@ video {
     padding: 10px 15px;
     border: none;
     border-radius: 5px;
-    background-color: #555;
+    background-color: #555; /* Base button color */
     color: white;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
     font-size: 20px;
-    position: relative; /* For tooltips */
 }
 
 .control-btn:hover {
-    background-color: #777;
+    background-color: #76c7c0; /* Hover color */
     transform: scale(1.1);
-}
-
-.control-btn::after {
-    content: attr(aria-label);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
-    color: #fff;
-    padding: 5px;
-    border-radius: 5px;
-    white-space: nowrap;
-    visibility: hidden;
-    opacity: 0;
-    transition: visibility 0s, opacity 0.2s ease;
-    font-size: 12px;
-}
-
-.control-btn:hover::after {
-    visibility: visible;
-    opacity: 1;
 }
 
 #volumeContainer {
@@ -125,32 +98,14 @@ input[type="range"] {
     background-color: #e0e0e0;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    appearance: none;
-}
-
-#progressBar::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    height: 16px;
-    width: 16px;
-    background: #76c7c0;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-#progressBar::-moz-range-thumb {
-    height: 16px;
-    width: 16px;
-    background: #76c7c0;
-    border-radius: 50%;
-    cursor: pointer;
 }
 
 #progressBar.playing {
-    background-color: #76c7c0;
+    background-color: #76c7c0; /* Playing state color */
 }
 
 #progressBar.paused {
-    background-color: #ffcc00;
+    background-color: #ffcc00; /* Paused state color */
 }
 
 #progressBar:hover {
@@ -191,45 +146,6 @@ input[type="range"] {
     margin-top: 10px;
     font-size: 16px;
     color: #e5e5e5;
-}
-
-/* Media Queries */
-@media (max-width: 768px) {
-    .container {
-        padding: 10px;
-    }
-
-    #controls {
-        flex-direction: column;
-        gap: 5px;
-    }
-
-    .control-btn {
-        font-size: 18px;
-        padding: 8px 12px;
-    }
-
-    input[type="range"] {
-        margin-top: 5px;
-    }
-}
-
-@media (max-width: 480px) {
-    h1 {
-        font-size: 24px;
-    }
-
-    #timeDisplay {
-        font-size: 14px;
-    }
-
-    #currentVolume {
-        font-size: 14px;
-    }
-
-    #fullscreenButton {
-        font-size: 18px;
-    }
 }
 body.light {
     background-color: #f0f0f0;
