@@ -1,26 +1,26 @@
 # React Video Player
 
-A feature-rich video player application built with React and TailwindCSS that lets you manage and play your collection of videos with various playback controls and customization options.
+React Video Player is a modern, feature-rich web application for managing and watching your video collection. Built with React and TailwindCSS, it provides an intuitive interface with advanced playback controls, progress tracking, and theme customization. Users can import videos via URLs or files, organize and search their library, and enjoy a responsive experience across devices. The app saves your video progress and preferences using localStorage, ensuring a seamless and personalized viewing experience.
 
 ## Features
 
-- **Video playback** with native controls (play/pause, seek, volume, fullscreen)
+- **Video playback** with custom controls (play/pause, seek, volume, fullscreen)
 - **Progress tracking** - automatically saves your watching progress for each video
-- **Dark/Light mode** with theme persistence
+- **Dark/Light mode** with theme persistence and system preference support
 - **Video management**:
   - Search and filter videos
-  - Sort videos alphabetically
+  - Sort videos alphabetically or by last played date
   - Delete unwanted videos
   - Import videos from various sources
 - **Advanced playback controls**:
   - Adjustable playback speed (0.5x to 2x)
-  - Keyboard shortcuts for common actions
+  - Keyboard shortcuts for common actions (play/pause, seek, volume, mute, fullscreen)
   - Picture-in-Picture support
 - **Import options**:
   - Add individual videos with URLs
-  - Import multiple videos from JSON files
-  - Import multiple videos from text files
-- **Responsive design** that works on both desktop and mobile devices
+  - Import multiple videos from JSON files (array of `{ name, url }`)
+  - Import multiple videos from text files (one URL or "name,url" per line)
+- **Responsive design** for desktop and mobile devices
 
 ## Tech Stack
 
@@ -91,6 +91,9 @@ yarn preview
 
 - **Space**: Toggle play/pause
 - **Left/Right Arrow**: Seek backward/forward 10 seconds
+- **Up/Down Arrow**: Adjust volume
+- **M**: Mute/unmute
+- **F**: Toggle fullscreen
 - **Click on progress bar**: Jump to that position in the video
 - **Playback speed menu**: Change playback speed from 0.5x to 2x
 - **Picture-in-Picture**: Enable floating video window
