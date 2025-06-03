@@ -1,61 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Local Video Player</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-</head>
-<body>
-
-    <div class="container" role="application">
-        <h1>Local Video Player</h1>
-        <div id="videoSelectContainer">
-            <label for="videoSelect">Select a Video:</label>
-            <select id="videoSelect" aria-label="Video selection dropdown"></select>
-        </div>
-
-        <div id="videoContainer" class="video-card" style="display: none;">
-            <video id="videoPlayer">
-                <source id="videoSource" src="" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div id="videoTitle">Select a video to play</div>
-            <div id="timeDisplay">00:00 / 00:00</div>
-            <input type="range" id="progressBar" value="0" step="1" />
-            <div id="loadingIndicator" style="display: none;">Loading...</div>
-        </div>
-
-        <div id="controls">
-            <button id="rewindButton" class="control-btn" aria-label="Rewind 10 seconds">⏪</button> <!-- New Button -->
-            <button id="prevButton" class="control-btn" aria-label="Previous video">⏮</button>
-            <button id="playPauseButton" class="control-btn" aria-label="Play video">▶</button>
-            <button id="nextButton" class="control-btn" aria-label="Next video">⏭</button>
-            <button id="fastForwardButton" class="control-btn" aria-label="Fast forward 10 seconds">⏩</button> <!-- New Button -->
-            <button id="fullscreenButton" class="control-btn" aria-label="Toggle fullscreen">⛶</button>
-            <label for="speedControl">Speed:</label>
-            <select id="speedControl" aria-label="Playback speed selection">
-                <option value="0.5">0.5x</option>
-                <option value="0.75">0.75x</option>
-                <option value="1" selected>1x</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2x</option>
-            </select>
-            <button id="muteButton" class="control-btn" aria-label="Mute">🔇</button>
-        </div>
-
-        <div id="volumeContainer">
-            <label for="volumeControl">Volume:</label>
-            <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1" aria-label="Volume control">
-            <span id="currentVolume">100%</span>
-        </div>
-
-        <span id="currentSpeed">Speed: 1x</span>
-        <button id="themeToggle" aria-label="Toggle theme">🌙</button>
-    </div>
-
-    <script src="script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React Video Player</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
