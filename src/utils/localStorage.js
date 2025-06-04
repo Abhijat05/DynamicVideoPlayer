@@ -1,37 +1,26 @@
 // Get stored videos from localStorage
 export const getStoredVideos = () => {
     try {
-        const videos = localStorage.getItem('videoplayer_videos')
+        const videos = localStorage.getItem('videos')
         return videos ? JSON.parse(videos) : []
     } catch (error) {
-        console.error('Error retrieving videos from localStorage:', error)
+        console.error('Error retrieving videos:', error)
         return []
     }
 }
 
 // Save all videos to localStorage
 export const saveVideos = (videos) => {
-  try {
-    localStorage.setItem('videoplayer_videos', JSON.stringify(videos))
-  } catch (error) {
-    console.error('Error saving videos to localStorage:', error)
-  }
-}
-
-// Save progress for a specific video
-export const saveVideoProgress = (videoUrl, progress) => {
     try {
-        const videos = getStoredVideos()
-        const updatedVideos = videos.map(video => {
-            if (video.url === videoUrl) {
-                return { ...video, progress, lastPlayed: new Date().toISOString() }
-            }
-            return video
-        })
-
-        saveVideos(updatedVideos)
+        // Keep necessary properties
+        const cleanedVideos = videos.map(video => {
+            const { name, url, isLocalFile } = video;
+            return { name, url, isLocalFile };
+        });
+        
+        localStorage.setItem('videos', JSON.stringify(cleanedVideos));
     } catch (error) {
-        console.error('Error saving video progress:', error)
+        console.error('Error saving videos:', error);
     }
 }
 

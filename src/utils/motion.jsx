@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 
 export const fadeIn = (direction) => {
   return {
@@ -19,10 +20,4 @@ export const fadeIn = (direction) => {
   }
 }
 
-// Adding mock framer-motion functionality
-export const motion = {
-  div: ({ children, ...props }) => <div {...props}>{children}</div>,
-  ul: ({ children, ...props }) => <ul {...props}>{children}</ul>,
-  li: ({ children, ...props }) => <li {...props}>{children}</li>,
-  button: ({ children, ...props }) => <button {...props}>{children}</button>,
-}
+export { motion }

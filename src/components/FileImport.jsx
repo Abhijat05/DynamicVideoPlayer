@@ -43,19 +43,39 @@ const FileImport = ({ onImport }) => {
           
           // Validate JSON structure
           if (!Array.isArray(jsonContent)) {
-            setError('Invalid format: JSON must be an array of video objects')
+            setError('Invalid JSON format: Expected an array of video objects. Example: [{"name":"Video 1","url":"https://example.com/video.mp4"}]')
             return
           }
           
-          // Validate each video has name and url
-          parsedVideos = jsonContent.filter(video => {
-            return typeof video === 'object' && video.name && video.url
-          })
+          // Improve validation reporting
+          const validationErrors = [];
+          const validVideos = jsonContent.filter(video => {
+            if (typeof video !== 'object' || !video) {
+              validationErrors.push('Some items are not objects');
+              return false;
+            }
+            if (!video.url) {
+              validationErrors.push(`Missing URL for item with name: ${video.name || 'unnamed'}`);
+              return false;
+            }
+            if (!isValidURL(video.url)) {
+              validationErrors.push(`Invalid URL format: ${video.url}`);
+              return false;
+            }
+            return true;
+          });
           
-          if (parsedVideos.length === 0) {
-            setError('No valid videos found. Each video must have name and url properties.')
-            return
+          if (validVideos.length === 0) {
+            setError(`No valid videos found. Issues: ${validationErrors.slice(0, 3).join(', ')}${validationErrors.length > 3 ? '...' : ''}`);
+            return;
           }
+          
+          // Show partial success warning
+          if (validVideos.length < jsonContent.length) {
+            setError(`Warning: Only ${validVideos.length} out of ${jsonContent.length} videos were valid. The valid ones were imported.`);
+          }
+          
+          parsedVideos = validVideos
         } else if (file.name.endsWith('.txt')) {
           // Handle TXT files
           const content = event.target.result.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -320,7 +340,12 @@ const FileImport = ({ onImport }) => {
                           const file = e.target.files[0];
                           const url = URL.createObjectURL(file);
                           const name = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
-                          onImport([{ name, url, isLocalFile: true }]);
+                          onImport([{ 
+                            name, 
+                            url, 
+                            isLocalFile: true,
+                            originalType: file.type // Store original mime type
+                          }]);
                           e.target.value = ''; // Reset for repeated selections
                         }
                       }}

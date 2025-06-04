@@ -9,59 +9,7 @@ import {
 } from '@/utils/localStorage'
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/ui/Navbar'
-import { motion, fadeIn } from '@/utils/motion'
-
-const RecentlyPlayed = ({ videos, onVideoSelect, currentVideoUrl }) => {
-  // Get recently played videos (with lastPlayed date, sorted by most recent)
-  const recentVideos = videos
-    .filter(video => video.lastPlayed)
-    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed))
-    .slice(0, 5);
-  
-  if (recentVideos.length === 0) return null;
-  
-  return (
-    <motion.div 
-      variants={fadeIn('up')}
-      initial="hidden"
-      animate="visible"
-      className="bg-card rounded-lg p-4 shadow-md border border-border mb-6"
-    >
-      <h2 className="text-lg font-semibold mb-3">Recently Played</h2>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-        {recentVideos.map(video => (
-          <div 
-            key={video.url}
-            className={cn(
-              "flex-shrink-0 w-32 cursor-pointer rounded-md overflow-hidden border transition-all",
-              currentVideoUrl === video.url 
-                ? "border-primary ring-1 ring-primary" 
-                : "border-border hover:border-primary/30"
-            )}
-            onClick={() => onVideoSelect(video)}
-          >
-            <div className="bg-secondary aspect-video flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="6 3 20 12 6 21 6 3"></polygon>
-              </svg>
-            </div>
-            <div className="p-2">
-              <p className="text-xs font-medium line-clamp-1">{video.name}</p>
-              {video.progress > 0 && (
-                <div className="mt-1 h-1 bg-secondary rounded-full">
-                  <div 
-                    className="h-full bg-primary rounded-full" 
-                    style={{ width: `${video.progress * 100}%` }}
-                  ></div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-};
+import { motion } from '@/utils/motion'
 
 const App = () => {
   const [videos, setVideos] = useState([])
@@ -71,6 +19,9 @@ const App = () => {
 
   // Load saved videos and theme on mount
   useEffect(() => {
+    // Set up theme listener for system preference changes
+    const cleanup = setupThemeListener(setThemeWithPersistence)
+    
     // Load videos
     const storedVideos = getStoredVideos()
     if (storedVideos.length) setVideos(storedVideos)
@@ -78,12 +29,12 @@ const App = () => {
     // Load theme preference
     const savedTheme = localStorage.getItem('videoplayer_theme')
     if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+      setThemeWithPersistence(savedTheme)
+    } else {
+      // If no saved theme, use system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      setThemeWithPersistence(prefersDark ? 'dark' : 'light')
     }
-    
-    // Set up theme listener for system preference changes
-    const cleanup = setupThemeListener(setThemeWithPersistence)
     
     return cleanup
   }, [])
@@ -108,8 +59,7 @@ const App = () => {
       if (!videos.some(v => v.url === video.url)) {
         newVideos.push({
           ...video,
-          progress: 0,
-          lastPlayed: null
+          url: video.url
         })
       }
     })
@@ -163,26 +113,16 @@ const App = () => {
           </div>
           
           <div className="space-y-6">
-            <div className="lg:col-span-3">
-              <RecentlyPlayed 
-                videos={videos}
-                onVideoSelect={setCurrentVideo}
-                currentVideoUrl={currentVideo?.url}
-              />
-            </div>
-            
             <FileImport onImport={handleImportVideos} />
             
-            <div className="bg-card text-card-foreground p-4 rounded-lg shadow-md border border-border video-list-container">
-              <VideoList 
-                videos={videos}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                onVideoSelect={setCurrentVideo}
-                onDeleteVideo={handleDeleteVideo}
-                currentVideoUrl={currentVideo?.url}
-              />
-            </div>
+            <VideoList
+              videos={videos}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onVideoSelect={setCurrentVideo}
+              onDeleteVideo={handleDeleteVideo}
+              currentVideoUrl={currentVideo?.url}
+            />
           </div>
         </div>
       </div>
