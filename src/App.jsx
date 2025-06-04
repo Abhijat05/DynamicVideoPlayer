@@ -10,7 +10,6 @@ import {
 import { cn } from '@/lib/utils'
 import Navbar from '@/components/ui/Navbar'
 import { motion, fadeIn } from '@/utils/motion'
-import { Search, X } from 'lucide-react'
 
 const RecentlyPlayed = ({ videos, onVideoSelect, currentVideoUrl }) => {
   // Get recently played videos (with lastPlayed date, sorted by most recent)
@@ -69,7 +68,6 @@ const App = () => {
   const [currentVideo, setCurrentVideo] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [theme, setTheme] = useState('light')
-  const [showQuickMenu, setShowQuickMenu] = useState(false);
 
   // Load saved videos and theme on mount
   useEffect(() => {
@@ -187,36 +185,6 @@ const App = () => {
             </div>
           </div>
         </div>
-      </div>
-      
-      <div className="fixed bottom-16 right-4 z-30">
-        <div className={`space-y-2 mb-2 transition-all ${showQuickMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}>
-          <button 
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
-            onClick={() => document.querySelector('input[placeholder*="Search videos"]')?.focus()}
-            title="Search Videos"
-          >
-            <Search size={20} />
-          </button>
-          <button 
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
-            onClick={() => document.querySelector('summary, [role="button"]')?.click()}
-            title="Import Videos"
-          >
-            <span className="text-lg font-bold">+</span>
-          </button>
-        </div>
-        
-        <button
-          className="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-          onClick={() => setShowQuickMenu(!showQuickMenu)}
-        >
-          {showQuickMenu ? (
-            <X size={24} />
-          ) : (
-            <span className="text-lg font-bold">•••</span>
-          )}
-        </button>
       </div>
     </div>
   )

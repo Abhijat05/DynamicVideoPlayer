@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { fadeIn } from '@/utils/motion'
 import {
   Tooltip,
@@ -9,7 +9,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ChevronDown, ChevronUp, Clock, Filter, Trash2, Play, List, Grid, ArrowUp, Search, X } from 'lucide-react'
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  Clock, 
+  Trash2, 
+  Play, 
+  List, 
+  Grid, 
+  ArrowUp, 
+  Search, 
+  X,
+  Filter,
+  MoreHorizontal,
+  Folder,
+  FolderOpen,
+  Video,
+  PlayCircle,
+  Pause
+} from 'lucide-react'
 
 const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVideoUrl, onSearchChange }) => {
   const [sortMode, setSortMode] = useState('name-asc') 
@@ -18,244 +36,180 @@ const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVi
   const [expandedCollections, setExpandedCollections] = useState([])
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
-  const [contextMenu, setContextMenu] = useState({ 
-    visible: false, 
-    x: 0, 
-    y: 0,
-    videoUrl: null 
-  })
-  const [gridView, setGridView] = useState(false); // Add to VideoList state
+  const [hoveredVideo, setHoveredVideo] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
   
-  // Create ref for scrolling container
   const scrollContainerRef = useRef(null)
   
-  // Track scroll position to show/hide scroll-to-top button
+  // Enhanced scroll tracking with smooth behavior
   useEffect(() => {
     const handleScroll = () => {
       if (scrollContainerRef.current) {
-        setShowScrollTop(scrollContainerRef.current.scrollTop > 300)
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
+        setShowScrollTop(scrollTop > 200)
       }
     }
     
     const scrollContainer = scrollContainerRef.current
     if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll)
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
       return () => scrollContainer.removeEventListener('scroll', handleScroll)
     }
   }, [])
 
-  // Auto-expand collections that match search term
+  // Auto-expand collections with better search matching
   useEffect(() => {
     if (searchTerm.trim()) {
       const matchingCollections = videoCollections
-        .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(c => 
+          c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.videos.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
         .map(c => c.name)
       
       setExpandedCollections(prev => {
-        const newExpanded = [...prev]
-        matchingCollections.forEach(name => {
-          if (!newExpanded.includes(name)) {
-            newExpanded.push(name)
-          }
-        })
+        const newExpanded = [...new Set([...prev, ...matchingCollections])]
         return newExpanded
       })
     }
   }, [searchTerm, videos])
 
-  // Scroll to the current playing video when it changes
+  // Enhanced scroll to current video
   useEffect(() => {
     if (currentVideoUrl) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         const element = document.getElementById(`video-${encodeURIComponent(currentVideoUrl)}`)
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          })
         }
-      }, 100)
+      }, 150)
+      return () => clearTimeout(timeoutId)
     }
   }, [currentVideoUrl])
   
-  // Add to VideoList component
+  // Load and save preferences
   useEffect(() => {
-    // Load user preferences
-    const savedViewMode = localStorage.getItem('videoplayer_viewmode');
-    const savedSortMode = localStorage.getItem('videoplayer_sortmode');
-    const savedGridView = localStorage.getItem('videoplayer_gridview');
+    const savedViewMode = localStorage.getItem('videoplayer_viewmode')
+    const savedSortMode = localStorage.getItem('videoplayer_sortmode')
+    const savedExpandedCollections = localStorage.getItem('videoplayer_expanded_collections')
     
-    if (savedViewMode) setViewMode(savedViewMode);
-    if (savedSortMode) setSortMode(savedSortMode);
-    if (savedGridView) setGridView(savedGridView === 'true');
-  }, []);
-
-  // Save preferences when they change
-  useEffect(() => {
-    localStorage.setItem('videoplayer_viewmode', viewMode);
-  }, [viewMode]);
-
-  useEffect(() => {
-    localStorage.setItem('videoplayer_sortmode', sortMode);
-  }, [sortMode]);
+    if (savedViewMode) setViewMode(savedViewMode)
+    if (savedSortMode) setSortMode(savedSortMode)
+    if (savedExpandedCollections) {
+      try {
+        setExpandedCollections(JSON.parse(savedExpandedCollections))
+      } catch (e) {
+        console.warn('Failed to parse saved expanded collections')
+      }
+    }
+  }, [])
 
   useEffect(() => {
-    localStorage.setItem('videoplayer_gridview', gridView.toString());
-  }, [gridView]);
+    localStorage.setItem('videoplayer_viewmode', viewMode)
+  }, [viewMode])
 
-  // Remaining logic stays the same...
+  useEffect(() => {
+    localStorage.setItem('videoplayer_sortmode', sortMode)
+  }, [sortMode])
+
+  useEffect(() => {
+    localStorage.setItem('videoplayer_expanded_collections', JSON.stringify(expandedCollections))
+  }, [expandedCollections])
+
+  // Enhanced video processing with better error handling
   const { videoCollections, singleVideos } = useMemo(() => {
-    // For local files, provide better visualization and handling
-    const enhancedVideos = videos.map(video => {
-      let result = { ...video };
-      
-      if (video.url && video.url.startsWith('blob:')) {
-        result.isLocalFile = true;
-        result.icon = 'file'; // Used for display differentiation
+    setIsLoading(true)
+    
+    try {
+      const enhancedVideos = videos.map(video => {
+        let result = { ...video }
         
-        // If the video doesn't already have a thumbnail, create one
-        if (!video.thumbnailUrl) {
-          // Create a temporary video element to generate thumbnail
-          try {
-            // Attempt to generate thumbnail from video
-            const tempVideo = document.createElement('video');
-            tempVideo.src = video.url;
-            tempVideo.muted = true;
-            tempVideo.crossOrigin = "anonymous"; // Add this for cross-origin videos
-            
-            // Add error handler
-            tempVideo.onerror = (e) => {
-              console.error('Error loading video for thumbnail generation:', e);
-            };
-            
-            // Add timeout to prevent hanging
-            const timeoutId = setTimeout(() => {
-              if (tempVideo) {
-                tempVideo.pause();
-                tempVideo.src = '';
-                tempVideo.load();
-                console.warn('Thumbnail generation timed out for:', video.url);
-              }
-            }, 10000); // 10 second timeout
-            
-            tempVideo.onloadeddata = () => {
-              clearTimeout(timeoutId);
-              // Wait a bit to make sure video is ready
-              setTimeout(() => {
-                try {
-                  // Seek to 1/3 of the video for a good thumbnail spot
-                  if (tempVideo.duration) {
-                    tempVideo.currentTime = tempVideo.duration / 3;
-                  }
-                  
-                  tempVideo.onseeked = () => {
-                    // Create canvas and draw video frame
-                    const canvas = document.createElement('canvas');
-                    canvas.width = tempVideo.videoWidth;
-                    canvas.height = tempVideo.videoHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(tempVideo, 0, 0, canvas.width, canvas.height);
-                    
-                    // Convert canvas to thumbnail URL
-                    const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.6);
-                    
-                    // Update this video in state
-                    setVideos(prevVideos => 
-                      prevVideos.map(v => 
-                        v.url === video.url ? { ...v, thumbnailUrl } : v
-                      )
-                    );
-                    
-                    // Clean up
-                    tempVideo.pause();
-                    tempVideo.src = '';
-                    tempVideo.load();
-                  };
-                } catch (err) {
-                  console.error('Error generating thumbnail:', err);
-                }
-              }, 200);
-            };
-            
-            // Start loading
-            tempVideo.load();
-          } catch (err) {
-            console.error('Error generating thumbnail:', err);
-          }
+        if (video.url && video.url.startsWith('blob:')) {
+          result.isLocalFile = true
+          result.icon = 'file'
         }
-      }
-      return result;
-    })
-    
-    // First filter by search term
-    const filteredVideos = enhancedVideos.filter(video => {
-      const term = searchTerm.toLowerCase().trim()
-      if (!term) return true
-      return video.name.toLowerCase().includes(term) || 
-             video.url.toLowerCase().includes(term)
-    })
-    
-    // Sort videos based on sort mode
-    const sortedVideos = [...filteredVideos].sort((a, b) => {
-      switch (sortMode) {
-        case 'name-asc':
-          return a.name.localeCompare(b.name)
-        case 'name-desc':
-          return b.name.localeCompare(a.name)
-        case 'date-newest':
-          return new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0)
-        case 'date-oldest':
-          return new Date(a.lastPlayed || 0) - new Date(b.lastPlayed || 0)
-        default:
-          return 0
-      }
-    })
-    
-    // Group videos by name
-    const collections = {}
-    const singles = []
-    
-    sortedVideos.forEach(video => {
-      const name = video.name.trim()
+        return result
+      })
       
-      if (collections[name]) {
+      // Enhanced filtering with fuzzy search
+      const filteredVideos = enhancedVideos.filter(video => {
+        const term = searchTerm.toLowerCase().trim()
+        if (!term) return true
+        
+        const searchableText = `${video.name} ${video.url}`.toLowerCase()
+        return searchableText.includes(term)
+      })
+      
+      // Sort videos
+      const sortedVideos = [...filteredVideos].sort((a, b) => {
+        switch (sortMode) {
+          case 'name-asc':
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+          case 'name-desc':
+            return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' })
+          case 'date-newest':
+            return new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0)
+          case 'date-oldest':
+            return new Date(a.lastPlayed || 0) - new Date(b.lastPlayed || 0)
+          default:
+            return 0
+        }
+      })
+      
+      // Group videos
+      const collections = {}
+      const singles = []
+      
+      sortedVideos.forEach(video => {
+        const name = video.name.trim()
+        collections[name] = collections[name] || []
         collections[name].push(video)
-      } else {
-        collections[name] = [video]
-      }
-    })
-    
-    // Separate single videos and collections
-    const collectionsArray = []
-    
-    Object.entries(collections).forEach(([name, videosArray]) => {
-      if (videosArray.length > 1) {
-        collectionsArray.push({
-          name,
-          videos: videosArray,
-          count: videosArray.length,
-          lastPlayed: getLatestDate(videosArray),
-          progress: getAverageProgress(videosArray)
-        })
-      } else {
-        singles.push(videosArray[0])
-      }
-    })
-    
-    // Sort collections by name
-    collectionsArray.sort((a, b) => {
-      if (sortMode.startsWith('name')) {
-        return sortMode === 'name-asc' 
-          ? a.name.localeCompare(b.name) 
-          : b.name.localeCompare(a.name)
-      } else {
-        return sortMode === 'date-newest'
-          ? new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0)
-          : new Date(a.lastPlayed || 0) - new Date(b.lastPlayed || 0)
-      }
-    })
-    
-    return { videoCollections: collectionsArray, singleVideos: singles }
+      })
+      
+      const collectionsArray = []
+      
+      Object.entries(collections).forEach(([name, videosArray]) => {
+        if (videosArray.length > 1) {
+          collectionsArray.push({
+            name,
+            videos: videosArray,
+            count: videosArray.length,
+            lastPlayed: getLatestDate(videosArray),
+            progress: getAverageProgress(videosArray),
+            totalDuration: getTotalDuration(videosArray)
+          })
+        } else {
+          singles.push(videosArray[0])
+        }
+      })
+      
+      // Sort collections
+      collectionsArray.sort((a, b) => {
+        if (sortMode.startsWith('name')) {
+          return sortMode === 'name-asc' 
+            ? a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+            : b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' })
+        } else {
+          return sortMode === 'date-newest'
+            ? new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0)
+            : new Date(a.lastPlayed || 0) - new Date(b.lastPlayed || 0)
+        }
+      })
+      
+      setIsLoading(false)
+      return { videoCollections: collectionsArray, singleVideos: singles }
+    } catch (error) {
+      console.error('Error processing videos:', error)
+      setIsLoading(false)
+      return { videoCollections: [], singleVideos: [] }
+    }
   }, [videos, searchTerm, sortMode])
   
-  // Helper functions remain the same...
+  // Helper functions
   function getLatestDate(videoArray) {
     return videoArray.reduce((latest, video) => {
       if (!video.lastPlayed) return latest
@@ -265,8 +219,20 @@ const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVi
   }
   
   function getAverageProgress(videoArray) {
-    const totalProgress = videoArray.reduce((sum, video) => sum + (video.progress || 0), 0)
-    return totalProgress / videoArray.length
+    if (videoArray.length === 0) return 0
+    const sum = videoArray.reduce((total, video) => total + (video.progress || 0), 0)
+    return sum / videoArray.length
+  }
+
+  function getTotalDuration(videoArray) {
+    return videoArray.reduce((total, video) => total + (video.duration || 0), 0)
+  }
+
+  function formatDuration(seconds) {
+    if (!seconds) return ''
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
   }
   
   const toggleCollectionExpand = (collectionName) => {
@@ -279,13 +245,10 @@ const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVi
     })
   }
 
-  // Handle expanding/collapsing all collections
   const toggleAllCollections = (expand) => {
     if (expand) {
-      // Expand all collections
       setExpandedCollections(videoCollections.map(c => c.name))
     } else {
-      // Collapse all collections
       setExpandedCollections([])
     }
   }
@@ -297,6 +260,14 @@ const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVi
   const formatDate = (dateString) => {
     if (!dateString) return ''
     const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = now - date
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    
     return date.toLocaleDateString(undefined, { 
       year: 'numeric', 
       month: 'short', 
@@ -304,7 +275,6 @@ const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVi
     })
   }
 
-  // Scroll to top function
   const scrollToTop = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
@@ -330,674 +300,653 @@ const VideoList = ({ videos, searchTerm, onVideoSelect, onDeleteVideo, currentVi
     setConfirmDelete(null)
   }
   
-  const handleContextMenu = (e, videoUrl) => {
-    e.preventDefault();
-    setContextMenu({ 
-      visible: true, 
-      x: e.clientX, 
-      y: e.clientY,
-      videoUrl 
-    });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (contextMenu.visible) setContextMenu(prev => ({...prev, visible: false}));
-    };
-    
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [/* No dependency on contextMenu */]);
-
-  // Count total visible videos for better user awareness
-  const totalVisibleVideos = singleVideos.length + videoCollections.reduce((sum, c) => sum + c.videos.length, 0)
+  const totalVisibleVideos = videoCollections.reduce((count, collection) => count + collection.count, 0) + singleVideos.length
+  const hasResults = totalVisibleVideos > 0
   
   return (
-    <div className="space-y-4">
-      {/* Enhanced header with better alignment and spacing */}
-      <div className="flex flex-col gap-4 mb-6">
-        {/* Title and badge row */}
+    <div className="flex flex-col h-full">
+      {/* Enhanced Header */}
+      <div className="flex-shrink-0 space-y-4 pb-4 border-b border-border/50">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Videos</h2>
-            <Badge variant="secondary" className="text-xs">
-              {videos.length} {searchTerm && <> / {totalVisibleVideos} shown</>}
-            </Badge>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-xl font-semibold tracking-tight">Videos</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs font-medium">
+                {videos.length} total
+              </Badge>
+              {searchTerm && (
+                <Badge variant="outline" className="text-xs">
+                  {totalVisibleVideos} shown
+                </Badge>
+              )}
+            </div>
           </div>
 
-          {/* Controls in a flex container */}
+          {/* Enhanced Controls */}
           <div className="flex gap-2 items-center">
-            {/* View mode toggle */}
+            {/* View mode toggle with better icons */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button 
                     onClick={() => setViewMode(viewMode === 'collections' ? 'list' : 'collections')}
                     className={cn(
-                      "p-2 rounded-md transition-all",
-                      "bg-secondary hover:bg-secondary/80",
-                      viewMode === 'list' && "bg-primary text-primary-foreground hover:bg-primary/90"
+                      "p-2.5 rounded-lg transition-all duration-200 border",
+                      "hover:scale-105 active:scale-95",
+                      viewMode === 'collections' 
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                        : "bg-card hover:bg-accent border-border"
                     )}
                   >
-                    {viewMode === 'collections' ? <List size={16} /> : <Grid size={16} />}
+                    {viewMode === 'collections' ? 
+                      <Folder size={16} /> : 
+                      <List size={16} />
+                    }
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {viewMode === 'collections' ? 'Show as flat list' : 'Show as collections'}
+                <TooltipContent side="bottom">
+                  {viewMode === 'collections' ? 'Switch to list view' : 'Switch to collections view'}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             
-            {/* Sort dropdown menu */}
+            {/* Enhanced Sort dropdown */}
             <div className="relative group">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button 
-                      className={cn(
-                        "p-2 rounded-md transition-all flex items-center",
-                        "bg-secondary hover:bg-secondary/80"
-                      )}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m3 16 4 4 4-4" />
-                        <path d="M7 20V4" />
-                        <path d="M11 4h10" />
-                        <path d="M11 8h7" />
-                        <path d="M11 12h4" />
-                      </svg>
+                    <button className="p-2.5 rounded-lg transition-all duration-200 border bg-card hover:bg-accent border-border hover:scale-105 active:scale-95">
+                      <Filter size={16} />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent>Sort videos</TooltipContent>
+                  <TooltipContent side="bottom">Sort options</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               
-              <div className="absolute right-0 top-full mt-1 bg-popover border border-border shadow-lg rounded-md overflow-hidden z-10 w-40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <div className="py-1">
-                  <button 
-                    className={cn(
-                      "w-full text-left px-3 py-2 text-sm flex items-center gap-2",
-                      sortMode === 'name-asc' ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-                    )}
-                    onClick={() => handleSortChange('name-asc')}
-                  >
-                    <ChevronUp size={14} />
-                    <span>Name (A-Z)</span>
-                  </button>
-                  <button 
-                    className={cn(
-                      "w-full text-left px-3 py-2 text-sm flex items-center gap-2",
-                      sortMode === 'name-desc' ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-                    )}
-                    onClick={() => handleSortChange('name-desc')}
-                  >
-                    <ChevronDown size={14} />
-                    <span>Name (Z-A)</span>
-                  </button>
-                  <button 
-                    className={cn(
-                      "w-full text-left px-3 py-2 text-sm flex items-center gap-2",
-                      sortMode === 'date-newest' ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-                    )}
-                    onClick={() => handleSortChange('date-newest')}
-                  >
-                    <Clock size={14} />
-                    <span>Newest first</span>
-                  </button>
-                  <button 
-                    className={cn(
-                      "w-full text-left px-3 py-2 text-sm flex items-center gap-2",
-                      sortMode === 'date-oldest' ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-                    )}
-                    onClick={() => handleSortChange('date-oldest')}
-                  >
-                    <Clock size={14} />
-                    <span>Oldest first</span>
-                  </button>
+              <div className="absolute right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-lg overflow-hidden z-20 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-95 group-hover:scale-100">
+                <div className="p-1">
+                  {[
+                    { mode: 'name-asc', icon: ChevronUp, label: 'Name (A-Z)' },
+                    { mode: 'name-desc', icon: ChevronDown, label: 'Name (Z-A)' },
+                    { mode: 'date-newest', icon: Clock, label: 'Recently played' },
+                    { mode: 'date-oldest', icon: Clock, label: 'Oldest first' }
+                  ].map(({ mode, icon: Icon, label }) => (
+                    <button 
+                      key={mode}
+                      className={cn(
+                        "w-full text-left px-3 py-2.5 text-sm flex items-center gap-3 rounded-md transition-colors",
+                        sortMode === mode 
+                          ? "bg-primary text-primary-foreground" 
+                          : "hover:bg-accent"
+                      )}
+                      onClick={() => handleSortChange(mode)}
+                    >
+                      <Icon size={14} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-
-            {/* Grid/List toggle button */}
-            <button
-              onClick={() => setGridView(!gridView)}
-              className={cn(
-                "p-2 rounded-md transition-all",
-                "bg-secondary hover:bg-secondary/80",
-                gridView && "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-              aria-label={gridView ? "Switch to list view" : "Switch to grid view"}
-            >
-              {gridView ? <List size={16} /> : <Grid size={16} />}
-            </button>
           </div>
         </div>
-        
-        {/* Enhanced search bar with improved styling */}
-        <div className="relative w-full mb-4">
+
+        {/* Enhanced Search Bar */}
+        <div className="relative">
           <div className={cn(
-            "flex items-center relative",
-            "bg-card border rounded-md transition-all",
-            "focus-within:ring-1 focus-within:ring-primary focus-within:border-primary",
-            isSearchFocused && "shadow-md"
+            "flex items-center relative transition-all duration-200",
+            "bg-card border-2 rounded-xl shadow-sm",
+            "hover:shadow-md",
+            isSearchFocused 
+              ? "border-primary shadow-lg ring-2 ring-primary/20" 
+              : "border-border hover:border-border/80"
           )}>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className={cn(
+              "absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors",
+              isSearchFocused ? "text-primary" : "text-muted-foreground"
+            )} />
             <input
               type="text"
-              placeholder="Search videos by name or URL..."
-              className="w-full py-2.5 pl-10 pr-10 bg-transparent border-none focus:outline-none focus:ring-0 rounded-md"
+              placeholder="Search videos, collections, or URLs..."
+              className="w-full py-3 pl-12 pr-12 bg-transparent border-none focus:outline-none rounded-xl text-sm"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
             />
-            {searchTerm && (
-              <button 
-                onClick={() => onSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <AnimatePresence>
+              {searchTerm && (
+                <motion.button 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-accent transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
+        </div>
+
+        {/* Collection controls */}
+        {viewMode === 'collections' && videoCollections.length > 1 && (
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => toggleAllCollections(true)}
+                className="text-xs px-3 py-1.5 bg-secondary/50 hover:bg-secondary rounded-lg transition-colors font-medium"
+              >
+                Expand all
+              </button>
+              <button 
+                onClick={() => toggleAllCollections(false)}
+                className="text-xs px-3 py-1.5 bg-secondary/50 hover:bg-secondary rounded-lg transition-colors font-medium"
+              >
+                Collapse all
+              </button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {videoCollections.length} collections, {singleVideos.length} individual
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Videos Content */}
+      <div className="flex-1 overflow-hidden">
+        <div 
+          ref={scrollContainerRef}
+          className="h-full overflow-y-auto pt-4 px-1 scrollbar-thin scrollbar-thumb-secondary/50 scrollbar-track-transparent hover:scrollbar-thumb-secondary"
+        >
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-center py-20"
+              >
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Loading videos...</span>
+                </div>
+              </motion.div>
+            ) : videos.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex flex-col items-center justify-center py-20 text-center gap-4"
+              >
+                <div className="p-4 rounded-full bg-muted/30">
+                  <Video className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium">No videos found</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Import some videos to get started, or try adjusting your search terms.
+                  </p>
+                </div>
+              </motion.div>
+            ) : !hasResults ? (
+              <motion.div
+                key="no-results"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex flex-col items-center justify-center py-20 text-center gap-4"
+              >
+                <div className="p-4 rounded-full bg-muted/30">
+                  <Search className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium">No matching videos</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Try different search terms or clear the search to see all videos.
+                  </p>
+                  <button
+                    onClick={() => onSearchChange('')}
+                    className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              </motion.div>
+            ) : viewMode === 'collections' ? (
+              <CollectionsView
+                videoCollections={videoCollections}
+                singleVideos={singleVideos}
+                expandedCollections={expandedCollections}
+                currentVideoUrl={currentVideoUrl}
+                confirmDelete={confirmDelete}
+                hoveredVideo={hoveredVideo}
+                onToggleCollection={toggleCollectionExpand}
+                onVideoSelect={onVideoSelect}
+                onDeleteClick={handleDeleteClick}
+                onConfirmDelete={confirmDeleteVideo}
+                onCancelDelete={cancelDelete}
+                onVideoHover={setHoveredVideo}
+                formatDate={formatDate}
+                formatDuration={formatDuration}
+              />
+            ) : (
+              <ListView
+                videos={[...videoCollections.flatMap(c => c.videos), ...singleVideos]}
+                sortMode={sortMode}
+                currentVideoUrl={currentVideoUrl}
+                confirmDelete={confirmDelete}
+                hoveredVideo={hoveredVideo}
+                onVideoSelect={onVideoSelect}
+                onDeleteClick={handleDeleteClick}
+                onConfirmDelete={confirmDeleteVideo}
+                onCancelDelete={cancelDelete}
+                onVideoHover={setHoveredVideo}
+                formatDate={formatDate}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Collection controls when in collection view */}
-      {viewMode === 'collections' && videoCollections.length > 1 && (
-        <div className="flex justify-between items-center px-1">
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    onClick={() => toggleAllCollections(true)}
-                    className="text-xs px-2 py-1 bg-secondary/50 hover:bg-secondary rounded-md"
-                  >
-                    Expand all
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Show all videos in collections</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    onClick={() => toggleAllCollections(false)}
-                    className="text-xs px-2 py-1 bg-secondary/50 hover:bg-secondary rounded-md"
-                  >
-                    Collapse all
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Hide all videos in collections</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-      )}
-
-      {/* Video list with scroll indicator */}
-      <div 
-        ref={scrollContainerRef}
-        className="relative max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin"
-      >
-        {videos.length === 0 ? (
-          <div className="text-center py-8 bg-muted/50 rounded-lg border border-dashed border-muted">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-            </svg>
-            <p className="text-muted-foreground">
-              No videos found. Import some videos or adjust your search.
-            </p>
-          </div>
-        ) : viewMode === 'collections' ? (
-          <motion.div 
-            className="space-y-3"
-            variants={fadeIn('up')}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Collections */}
-            {videoCollections.length > 0 && (
-              <div className="space-y-2">
-                {videoCollections.map(collection => (
-                  <motion.div 
-                    key={collection.name}
-                    variants={fadeIn('up')}
-                    className="border border-border bg-card rounded-lg overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/40"
-                  >
-                    <div 
-                      className={cn(
-                        "p-4 flex items-start justify-between cursor-pointer",
-                        "hover:bg-accent/30 transition-colors",
-                        expandedCollections.includes(collection.name) && "bg-accent/20"
-                      )}
-                      onClick={() => toggleCollectionExpand(collection.name)}
-                    >
-                      <div className="flex-1 pr-4">
-                        <div className="flex items-center flex-wrap gap-2 mb-2">
-                          <h3 className="font-medium">{collection.name}</h3>
-                          <Badge>{collection.count}</Badge>
-                          {collection.progress > 0 && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                              {Math.round(collection.progress * 100)}%
-                            </span>
-                          )}
-                        </div>
-                        
-                        {collection.progress > 0 && (
-                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
-                            <div 
-                              className="h-full bg-primary rounded-full transition-all"
-                              style={{ width: `${collection.progress * 100}%` }}
-                            ></div>
-                          </div>
-                        )}
-                        
-                        {collection.lastPlayed && (
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-                            {formatDate(collection.lastPlayed)}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center">
-                        {expandedCollections.includes(collection.name) ? (
-                          <ChevronUp size={18} className="text-muted-foreground" />
-                        ) : (
-                          <ChevronDown size={18} className="text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Collection videos with improved styling */}
-                    {expandedCollections.includes(collection.name) && (
-                      <div className="bg-muted/30 border-t border-border px-2 py-2">
-                        <ul className="space-y-2">
-                          {collection.videos.map(video => (
-                            <li 
-                              key={video.url}
-                              id={`video-${encodeURIComponent(video.url)}`}
-                              className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-md",
-                                "hover:bg-accent/50 transition-colors",
-                                currentVideoUrl === video.url ? "bg-accent ring-1 ring-primary/30" : ""
-                              )}
-                            >
-                              <button 
-                                onClick={() => onVideoSelect(video)} 
-                                className={cn(
-                                  "p-1.5 rounded-full",
-                                  currentVideoUrl === video.url 
-                                    ? "bg-primary text-primary-foreground" 
-                                    : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
-                                )}
-                              >
-                                <Play size={14} className="ml-0.5" />
-                              </button>
-                              
-                              <div className="flex-1 min-w-0" onClick={() => onVideoSelect(video)}>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {video.url}
-                                </p>
-                                {video.progress > 0 && (
-                                  <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden">
-                                    <div 
-                                      className="h-full bg-primary rounded-full transition-all"
-                                      style={{ width: `${video.progress * 100}%` }}
-                                    ></div>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Delete button */}
-                              {confirmDelete === video.url ? (
-                                <div className="flex items-center space-x-1" onClick={e => e.stopPropagation()}>
-                                  <button 
-                                    className="text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded hover:bg-destructive/90"
-                                    onClick={(e) => confirmDeleteVideo(video.url, e)}
-                                  >
-                                    Delete
-                                  </button>
-                                  <button 
-                                    className="text-xs bg-secondary px-2 py-1 rounded hover:bg-secondary/80"
-                                    onClick={cancelDelete}
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button 
-                                  onClick={(e) => handleDeleteClick(video.url, e)}
-                                  className="text-muted-foreground hover:text-destructive p-1 rounded-full hover:bg-muted"
-                                  title="Delete video"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-            
-            {/* Single videos */}
-            {singleVideos.length > 0 && (
-              <div className="space-y-2">
-                {singleVideos.length > 0 && videoCollections.length > 0 && (
-                  <div className="flex items-center gap-2 pt-2">
-                    <div className="h-px flex-1 bg-border"></div>
-                    <span className="text-xs font-medium text-muted-foreground">Individual Videos</span>
-                    <div className="h-px flex-1 bg-border"></div>
-                  </div>
-                )}
-                
-                {singleVideos.map(video => (
-                  <motion.div
-                    variants={fadeIn('up')}
-                    key={video.url}
-                    id={`video-${encodeURIComponent(video.url)}`}
-                    className={cn(
-                      "p-4 rounded-lg border cursor-pointer transition-all duration-300",
-                      "hover:shadow-md hover:border-primary/40",
-                      currentVideoUrl === video.url 
-                        ? 'bg-accent border-primary ring-1 ring-primary/50' 
-                        : 'hover:bg-accent/50 border-border',
-                    )}
-                    onClick={() => onVideoSelect(video)}
-                    onContextMenu={(e) => handleContextMenu(e, video.url)}
-                  >
-                    {/* Main content with better structure */}
-                    <div className="flex flex-col gap-2">
-                      {/* Header row with improved spacing */}
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium flex items-center gap-1.5 truncate max-w-[70%]">
-                          {video.isLocalFile && (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                            </svg>
-                          )}
-                          <span className="truncate">{video.name}</span>
-                        </h3>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {video.progress > 0 && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">
-                              {Math.round(video.progress * 100)}%
-                            </span>
-                          )}
-                          
-                          {/* Delete button */}
-                          {confirmDelete === video.url ? (
-                            <div 
-                              className="flex items-center gap-1 z-10"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <button 
-                                className="text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded hover:bg-destructive/90"
-                                onClick={(e) => confirmDeleteVideo(video.url, e)}
-                              >
-                                Delete
-                              </button>
-                              <button 
-                                className="text-xs bg-secondary px-2 py-1 rounded hover:bg-secondary/80"
-                                onClick={cancelDelete}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button 
-                              onClick={(e) => handleDeleteClick(video.url, e)}
-                              className="text-muted-foreground hover:text-destructive p-1 transition-colors rounded-full hover:bg-muted flex-shrink-0"
-                              title="Delete video"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Progress bar */}
-                      {video.progress > 0 && (
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${video.progress * 100}%` }}
-                          ></div>
-                        </div>
-                      )}
-                      
-                      {/* URL and last played info in a footer row */}
-                      <div className="flex flex-col gap-1">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {video.url}
-                        </p>
-                        
-                        {video.lastPlayed && (
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-                            {formatDate(video.lastPlayed)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        ) : (
-          // Standard list view
-          <motion.ul 
-            variants={fadeIn('up')}
-            initial="hidden"
-            animate="visible"
-            className="space-y-3"
-          >
-            {[...videoCollections.flatMap(c => c.videos), ...singleVideos]
-              .sort((a, b) => {
-                switch (sortMode) {
-                  case 'name-asc':
-                    return a.name.localeCompare(b.name)
-                  case 'name-desc':
-                    return b.name.localeCompare(a.name)
-                  case 'date-newest':
-                    return new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0)
-                  case 'date-oldest':
-                    return new Date(a.lastPlayed || 0) - new Date(b.lastPlayed || 0)
-                  default:
-                    return 0
-                }
-              })
-              .map((video) => (
-                <motion.li
-                  variants={fadeIn('up')} 
-                  key={video.url}
-                  id={`video-${encodeURIComponent(video.url)}`}
-                  className={cn(
-                    "p-3 rounded-lg cursor-pointer transition-all relative border flex items-center gap-3",
-                    currentVideoUrl === video.url 
-                      ? 'bg-accent border-primary ring-1 ring-primary/50' 
-                      : 'hover:bg-accent/50 border-border',
-                  )}
-                  onClick={() => onVideoSelect(video)}
-                  onContextMenu={(e) => handleContextMenu(e, video.url)}
-                >
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onVideoSelect(video);
-                    }} 
-                    className={cn(
-                      "p-1.5 rounded-full flex-shrink-0",
-                      currentVideoUrl === video.url 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
-                    )}
-                  >
-                    <Play size={14} className="ml-0.5" />
-                  </button>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-medium flex items-center gap-1.5 truncate max-w-[80%]">
-                        {video.isLocalFile && (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                          </svg>
-                        )}
-                        {video.name}
-                      </h3>
-                      
-                      {video.progress > 0 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">
-                          {Math.round(video.progress * 100)}%
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-col mt-1">
-                      <p className="text-xs text-muted-foreground truncate">
-                        {video.url}
-                      </p>
-                      
-                      {video.progress > 0 && (
-                        <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${video.progress * 100}%` }}
-                          ></div>
-                        </div>
-                      )}
-                      
-                      {video.lastPlayed && (
-                        <div className="flex items-center mt-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-                          {formatDate(video.lastPlayed)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex-shrink-0">
-                    {/* Delete button */}
-                    {confirmDelete === video.url ? (
-                      <div 
-                        className="flex items-center gap-1 z-10"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <button 
-                          className="text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded hover:bg-destructive/90 transition-colors"
-                          onClick={(e) => confirmDeleteVideo(video.url, e)}
-                        >
-                          Delete
-                        </button>
-                        <button 
-                          className="text-xs bg-secondary px-2 py-1 rounded hover:bg-secondary/80 transition-colors"
-                          onClick={cancelDelete}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={(e) => handleDeleteClick(video.url, e)}
-                        className="text-muted-foreground hover:text-destructive p-1.5 transition-colors rounded-full hover:bg-muted"
-                        title="Delete video"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </motion.li>
-              ))
-            }
-          </motion.ul>
-        )}
-        
-        {/* Scroll to top button */}
+      {/* Enhanced Scroll to top button */}
+      <AnimatePresence>
         {showScrollTop && (
           <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="fixed bottom-4 right-4 bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 transition-all"
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            className="fixed bottom-6 right-6 bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:bg-primary/90 transition-all hover:scale-110 active:scale-95 z-30"
             onClick={scrollToTop}
             title="Scroll to top"
           >
-            <ArrowUp size={16} />
+            <ArrowUp size={18} />
           </motion.button>
         )}
-      </div>
-
-      {/* Quick action buttons above the list */}
-      <div className="flex items-center gap-3 px-2 mb-4 overflow-x-auto pb-2 scrollbar-thin">
-        <button 
-          className={cn(
-            "px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all",
-            "border border-border",
-            searchTerm ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-          )}
-          onClick={() => searchTerm ? onSearchChange('') : null}
-        >
-          {searchTerm ? "Clear Search" : "All Videos"}
-        </button>
-        
-        <button
-          className={cn(
-            "px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all",
-            "border border-border hover:bg-accent"
-          )}
-          onClick={() => {
-            // Focus on search input
-            document.querySelector('input[placeholder*="Search videos"]')?.focus();
-          }}
-        >
-          <Search className="h-3.5 w-3.5 inline mr-1" />
-          Search
-        </button>
-        
-        {/* Additional quick filters could go here */}
-      </div>
-
-      {/* Context menu for video items */}
-      {contextMenu.visible && (
-        <div 
-          className="fixed bg-popover border border-border rounded-md shadow-lg py-1 z-50"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-        >
-          <button 
-            className="px-4 py-2 text-sm w-full text-left hover:bg-accent"
-            onClick={() => {
-              // Find the video and play it
-              const video = videos.find(v => v.url === contextMenu.videoUrl);
-              if (video) onVideoSelect(video);
-              setContextMenu({...contextMenu, visible: false});
-            }}
-          >
-            Play
-          </button>
-          <button 
-            className="px-4 py-2 text-sm w-full text-left hover:bg-accent"
-            onClick={() => {
-              onDeleteVideo(contextMenu.videoUrl);
-              setContextMenu({...contextMenu, visible: false});
-            }}
-          >
-            Delete
-          </button>
-          {/* Add more context menu options as needed */}
-        </div>
-      )}
+      </AnimatePresence>
     </div>
   )
 }
+
+// Enhanced Collections View Component
+const CollectionsView = ({ 
+  videoCollections, 
+  singleVideos, 
+  expandedCollections,
+  currentVideoUrl,
+  confirmDelete,
+  hoveredVideo,
+  onToggleCollection,
+  onVideoSelect,
+  onDeleteClick,
+  onConfirmDelete,
+  onCancelDelete,
+  onVideoHover,
+  formatDate,
+  formatDuration
+}) => (
+  <motion.div 
+    key="collections"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    className="space-y-4"
+  >
+    {/* Collections */}
+    {videoCollections.map((collection, index) => (
+      <motion.div 
+        key={collection.name}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        className="border border-border bg-card/50 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30"
+      >
+        <div 
+          className={cn(
+            "p-4 flex items-center justify-between cursor-pointer",
+            "hover:bg-accent/30 transition-all duration-200",
+            expandedCollections.includes(collection.name) && "bg-accent/20 border-b border-border/50"
+          )}
+          onClick={() => onToggleCollection(collection.name)}
+        >
+          <div className="flex items-center gap-3 flex-1">
+            <div className="flex-shrink-0">
+              {expandedCollections.includes(collection.name) ? 
+                <FolderOpen className="h-5 w-5 text-primary" /> : 
+                <Folder className="h-5 w-5 text-muted-foreground" />
+              }
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-sm truncate">{collection.name}</h3>
+                <Badge variant="secondary" className="text-xs">
+                  {collection.count}
+                </Badge>
+                {collection.progress > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    {Math.round(collection.progress * 100)}%
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {collection.lastPlayed && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(collection.lastPlayed)}
+                  </div>
+                )}
+                {collection.totalDuration > 0 && (
+                  <div className="flex items-center gap-1">
+                    <PlayCircle className="h-3 w-3" />
+                    {formatDuration(collection.totalDuration)}
+                  </div>
+                )}
+              </div>
+
+              {collection.progress > 0 && (
+                <div className="mt-2 h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${collection.progress * 100}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <ChevronDown className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+            expandedCollections.includes(collection.name) && "rotate-180"
+          )} />
+        </div>
+        
+        <AnimatePresence>
+          {expandedCollections.includes(collection.name) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-muted/20 p-3 space-y-2">
+                {collection.videos.map((video, videoIndex) => (
+                  <VideoItem
+                    key={video.url}
+                    video={video}
+                    index={videoIndex}
+                    isActive={currentVideoUrl === video.url}
+                    confirmDelete={confirmDelete}
+                    hoveredVideo={hoveredVideo}
+                    onVideoSelect={onVideoSelect}
+                    onDeleteClick={onDeleteClick}
+                    onConfirmDelete={onConfirmDelete}
+                    onCancelDelete={onCancelDelete}
+                    onVideoHover={onVideoHover}
+                    formatDate={formatDate}
+                    compact={true}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    ))}
+    
+    {/* Single Videos */}
+    {singleVideos.length > 0 && (
+      <div className="space-y-3">
+        {videoCollections.length > 0 && (
+          <div className="flex items-center gap-3 py-2">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-xs font-medium text-muted-foreground bg-card px-3 py-1 rounded-full border">
+              Individual Videos
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-l from-transparent via-border to-transparent" />
+          </div>
+        )}
+        
+        {singleVideos.map((video, index) => (
+          <VideoItem
+            key={video.url}
+            video={video}
+            index={index}
+            isActive={currentVideoUrl === video.url}
+            confirmDelete={confirmDelete}
+            hoveredVideo={hoveredVideo}
+            onVideoSelect={onVideoSelect}
+            onDeleteClick={onDeleteClick}
+            onConfirmDelete={onConfirmDelete}
+            onCancelDelete={onCancelDelete}
+            onVideoHover={onVideoHover}
+            formatDate={formatDate}
+          />
+        ))}
+      </div>
+    )}
+  </motion.div>
+)
+
+// Enhanced List View Component  
+const ListView = ({ 
+  videos, 
+  sortMode, 
+  currentVideoUrl,
+  confirmDelete,
+  hoveredVideo,
+  onVideoSelect,
+  onDeleteClick,
+  onConfirmDelete,
+  onCancelDelete,
+  onVideoHover,
+  formatDate
+}) => {
+  const sortedVideos = [...videos].sort((a, b) => {
+    switch (sortMode) {
+      case 'name-asc':
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      case 'name-desc':
+        return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' })
+      case 'date-newest':
+        return new Date(b.lastPlayed || 0) - new Date(a.lastPlayed || 0)
+      case 'date-oldest':
+        return new Date(a.lastPlayed || 0) - new Date(b.lastPlayed || 0)
+      default:
+        return 0
+    }
+  })
+
+  return (
+    <motion.div
+      key="list"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-3"
+    >
+      {sortedVideos.map((video, index) => (
+        <VideoItem
+          key={video.url}
+          video={video}
+          index={index}
+          isActive={currentVideoUrl === video.url}
+          confirmDelete={confirmDelete}
+          hoveredVideo={hoveredVideo}
+          onVideoSelect={onVideoSelect}
+          onDeleteClick={onDeleteClick}
+          onConfirmDelete={onConfirmDelete}
+          onCancelDelete={onCancelDelete}
+          onVideoHover={onVideoHover}
+          formatDate={formatDate}
+        />
+      ))}
+    </motion.div>
+  )
+}
+
+// Enhanced Video Item Component
+const VideoItem = ({
+  video,
+  index,
+  isActive,
+  confirmDelete,
+  hoveredVideo,
+  onVideoSelect,
+  onDeleteClick,
+  onConfirmDelete,
+  onCancelDelete,
+  onVideoHover,
+  formatDate,
+  compact = false
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.03 }}
+    id={`video-${encodeURIComponent(video.url)}`}
+    className={cn(
+      "group relative overflow-hidden transition-all duration-200",
+      compact 
+        ? "rounded-lg border border-border/50 bg-card/30" 
+        : "rounded-xl border border-border bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md",
+      isActive 
+        ? "ring-2 ring-primary border-primary bg-primary/5" 
+        : "hover:border-primary/30",
+      hoveredVideo === video.url && "scale-[1.02]"
+    )}
+    onMouseEnter={() => onVideoHover(video.url)}
+    onMouseLeave={() => onVideoHover(null)}
+  >
+    <div
+      className={cn(
+        "flex items-center gap-3 cursor-pointer",
+        compact ? "p-3" : "p-4"
+      )}
+      onClick={() => onVideoSelect(video)}
+    >
+      {/* Play Button */}
+      <motion.button 
+        className={cn(
+          "flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-200",
+          compact ? "h-8 w-8" : "h-12 w-12",
+          isActive
+            ? "bg-primary text-primary-foreground shadow-lg"
+            : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground group-hover:scale-110"
+        )}
+        onClick={(e) => { 
+          e.stopPropagation()
+          onVideoSelect(video)
+        }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {isActive ? 
+          <Pause className={cn("ml-0", compact ? "h-3 w-3" : "h-5 w-5")} /> :
+          <Play className={cn("ml-0.5", compact ? "h-3 w-3" : "h-5 w-5")} />
+        }
+      </motion.button>
+      
+      {/* Video Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className={cn(
+            "font-medium truncate",
+            compact ? "text-sm" : "text-base",
+            isActive && "text-primary"
+          )}>
+            {video.isLocalFile && (
+              <span className="inline-flex items-center mr-1">
+                <div className="w-3 h-3 rounded-sm bg-blue-500/20 border border-blue-500/40 mr-1" />
+              </span>
+            )}
+            {video.name}
+          </h3>
+          
+          {video.progress > 0 && (
+            <Badge variant="outline" className="text-xs">
+              {Math.round(video.progress * 100)}%
+            </Badge>
+          )}
+        </div>
+        
+        <div className="space-y-1">
+          <p className={cn(
+            "text-muted-foreground truncate",
+            compact ? "text-xs" : "text-sm"
+          )}>
+            {video.url}
+          </p>
+          
+          {video.lastPlayed && (
+            <div className={cn(
+              "flex items-center text-muted-foreground",
+              compact ? "text-xs" : "text-sm"
+            )}>
+              <Clock className="h-3 w-3 mr-1" />
+              {formatDate(video.lastPlayed)}
+            </div>
+          )}
+          
+          {video.progress > 0 && (
+            <div className={cn("bg-secondary rounded-full overflow-hidden", compact ? "h-1" : "h-1.5")}>
+              <motion.div 
+                className="h-full bg-primary rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${video.progress * 100}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Delete Actions */}
+      <div className="flex-shrink-0">
+        {confirmDelete === video.url ? (
+          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={(e) => onConfirmDelete(video.url, e)}
+              className="px-3 py-1.5 text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-lg transition-colors"
+            >
+              Delete
+            </motion.button>
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={(e) => onCancelDelete(e)}
+              className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-secondary/50 hover:bg-secondary rounded-lg transition-colors"
+            >
+              Cancel
+            </motion.button>
+          </div>
+        ) : (
+          <motion.button 
+            onClick={(e) => onDeleteClick(video.url, e)}
+            className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete video"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </motion.button>
+        )}
+      </div>
+    </div>
+  </motion.div>
+)
 
 export default VideoList

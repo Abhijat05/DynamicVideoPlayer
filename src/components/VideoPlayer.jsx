@@ -11,6 +11,7 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
   const timelineRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
   const nextVideoCache = useRef(null)
+  const volumeTimeoutRef = useRef(null) // Add a new ref for volume slider timeout
   
   const [playerState, setPlayerState] = useState({
     playing: false,
@@ -213,6 +214,7 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
   useEffect(() => {
     return () => {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+      if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current)
       if (nextVideoCache.current) URL.revokeObjectURL(nextVideoCache.current)
     }
   }, [])
@@ -454,6 +456,37 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
     };
   }, [currentTime, seek, volume, adjustVolume]);
   
+  // Add this function to handle volume slider visibility with delay
+  const showVolumeSliderTemporarily = () => {
+    setUiState(prev => ({...prev, isVolumeSliderOpen: true}))
+    
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current)
+    }
+    
+    volumeTimeoutRef.current = setTimeout(() => {
+      setUiState(prev => ({...prev, isVolumeSliderOpen: false}))
+    }, 2000) // Increased timeout to 2 seconds
+  }
+
+  const hideVolumeSlider = () => {
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current)
+    }
+    
+    volumeTimeoutRef.current = setTimeout(() => {
+      setUiState(prev => ({...prev, isVolumeSliderOpen: false}))
+    }, 500) // Increased delay to 500ms
+  }
+
+  // Add this function to keep volume slider open while using it
+  const keepVolumeSliderOpen = () => {
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current)
+    }
+    setUiState(prev => ({...prev, isVolumeSliderOpen: true}))
+  }
+
   return (
     <div className="bg-card rounded-lg overflow-hidden shadow-lg border border-border transition-all">
       {/* Player container */}
@@ -529,25 +562,52 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
         
         {/* Big play button overlay (when video is paused) */}
         {!playing && !isLoading && videoReady && (
-          <div className="absolute inset-0 flex items-center justify-center cursor-pointer" onClick={togglePlay} onDoubleClick={handleDoubleClick}>
-            <div className="bg-primary/20 hover:bg-primary/40 rounded-full w-20 h-20 flex items-center justify-center backdrop-blur-md transition-transform transform hover:scale-110">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-10 h-10">
-                <path d="M8 5.14v14l11-7-11-7z" />
-              </svg>
+          <div className="absolute inset-0 flex items-center justify-center cursor-pointer group" onClick={togglePlay} onDoubleClick={handleDoubleClick}>
+            <div className="relative">
+              {/* Pulsing background ring */}
+              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
+              <div className="absolute inset-2 bg-primary/10 rounded-full animate-pulse"></div>
+              
+              {/* Main button */}
+              <div className="relative bg-primary/90 hover:bg-primary rounded-full w-20 h-20 flex items-center justify-center backdrop-blur-md transition-all duration-300 transform group-hover:scale-110 shadow-2xl shadow-primary/30">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-10 h-10 ml-1 drop-shadow-lg">
+                  <path d="M8 5.14v14l11-7-11-7z" />
+                </svg>
+              </div>
+              
+              {/* Ripple effect on hover */}
+              <div className="absolute inset-0 rounded-full border-2 border-white/30 opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-opacity"></div>
             </div>
           </div>
         )}
         
         {/* Loading spinner */}
         {isLoading && (
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm">
             <div className="flex items-center justify-center h-full">
-              <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-primary/30 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center text-primary text-xs font-medium">
-                  LOADING
+              <div className="relative">
+                {/* Animated loading ring */}
+                <div className="w-16 h-16 border-4 border-white/20 rounded-full"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
+                
+                {/* Pulsing inner circle */}
+                <div className="absolute inset-3 bg-primary/20 rounded-full animate-pulse"></div>
+                
+                {/* Loading text */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-primary text-xs font-bold tracking-wider">
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce"></div>
+                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+              
+              {/* Loading progress text */}
+              <div className="absolute bottom-1/3 text-white/80 text-sm font-medium">
+                Loading video...
               </div>
             </div>
           </div>
@@ -555,25 +615,50 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
         
         {/* Error message overlay */}
         {hasError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="bg-card p-6 rounded-lg max-w-md text-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-destructive mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <h3 className="text-lg font-semibold mb-2">Error Playing Video</h3>
-              <p className="text-muted-foreground mb-4">{uiState.errorMessage}</p>
-              <button 
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
-                onClick={() => {
-                  // Attempt to reload the video
-                  setUiState(prev => ({...prev, hasError: false, isLoading: true}))
-                  if (videoRef.current) {
-                    videoRef.current.load()
-                  }
-                }}
-              >
-                Try Again
-              </button>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <div className="bg-card/95 backdrop-blur-sm p-8 rounded-xl max-w-md text-center border border-destructive/20 shadow-2xl">
+              {/* Animated error icon */}
+              <div className="relative mx-auto mb-6">
+                <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-destructive animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="absolute inset-0 border-2 border-destructive/30 rounded-full animate-ping"></div>
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-3 text-destructive">Playback Error</h3>
+              <p className="text-muted-foreground mb-6 leading-relaxed">{uiState.errorMessage}</p>
+              
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button 
+                  className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg hover:bg-primary/90 transition-all duration-200 font-medium hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onClick={() => {
+                    setUiState(prev => ({...prev, hasError: false, isLoading: true}))
+                    if (videoRef.current) {
+                      videoRef.current.load()
+                    }
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Retry
+                </button>
+                
+                <button 
+                  className="bg-secondary text-secondary-foreground px-6 py-2.5 rounded-lg hover:bg-secondary/80 transition-all duration-200 font-medium hover:scale-105"
+                  onClick={() => {
+                    // Go to next video if available
+                    const currentIndex = videos.findIndex(v => v.url === video.url);
+                    if (currentIndex < videos.length - 1) {
+                      onSelectVideo(videos[currentIndex + 1]);
+                    }
+                  }}
+                >
+                  Skip Video
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -604,26 +689,39 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
             onMouseEnter={() => setUiState(prev => ({...prev, isHoveringTimeline: true}))}
             onMouseLeave={() => setUiState(prev => ({...prev, isHoveringTimeline: false}))}
           >
-            <div className="relative h-2 group">
-              {/* Track background */}
-              <div className="absolute inset-0 rounded-full bg-white/30"></div>
+            <div className="relative h-3 group">
+              {/* Track background with better visual hierarchy */}
+              <div className="absolute inset-0 rounded-full bg-white/20 backdrop-blur-sm"></div>
               
-              {/* Buffered indicator */}
+              {/* Buffered indicator with animation */}
               <div 
-                className="absolute inset-y-0 left-0 bg-white/50 rounded-full" 
+                className="absolute inset-y-0 left-0 bg-white/40 rounded-full transition-all duration-300" 
                 style={{ width: `${buffered * 100}%` }}
               ></div>
               
-              {/* Progress indicator with larger hover target */}
+              {/* Progress indicator with glow effect */}
               <div 
-                className="absolute inset-y-0 left-0 bg-primary rounded-full" 
+                className="absolute inset-y-0 left-0 bg-primary rounded-full shadow-lg shadow-primary/30 transition-all duration-150" 
                 style={{ width: `${(currentTime / duration) * 100}%` }}
               >
-                {/* Enhanced thumb that's more visible */}
-                <div className="opacity-0 group-hover:opacity-100 absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 h-4 w-4 rounded-full bg-primary ring-2 ring-white shadow-md transition-all"></div>
+                {/* Enhanced thumb with better visibility */}
+                <div className="opacity-0 group-hover:opacity-100 absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 h-5 w-5 rounded-full bg-primary ring-3 ring-white shadow-lg transition-all duration-200 scale-0 group-hover:scale-100"></div>
               </div>
               
-              {/* Invisible larger hit area for better UX */}
+              {/* Hover preview time tooltip */}
+              {isHoveringTimeline && timelineHoverPosition !== null && (
+                <div 
+                  className="absolute bottom-full mb-2 transform -translate-x-1/2 pointer-events-none z-20"
+                  style={{ left: `${timelineHoverPosition * 100}%` }}
+                >
+                  <div className="bg-black/90 backdrop-blur-md text-white text-xs px-2 py-1 rounded-md border border-white/20 shadow-xl">
+                    {formatTime(uiState.timelinePreviewTime)}
+                  </div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black/90"></div>
+                </div>
+              )}
+              
+              {/* Enhanced invisible hit area */}
               <input 
                 type="range" 
                 min="0" 
@@ -631,14 +729,18 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
                 step="0.01"
                 value={currentTime}
                 onChange={(e) => seek(parseFloat(e.target.value))}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-8 -top-3"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-8 -top-2.5 rounded-full"
               />
             </div>
             
-            {/* Time display with improved contrast */}
-            <div className="flex justify-between text-xs text-white pt-1.5 pb-1 font-medium">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
+            {/* Time display with better styling */}
+            <div className="flex justify-between text-xs text-white/90 pt-2 pb-1 font-medium tracking-wide">
+              <span className="bg-black/30 px-2 py-0.5 rounded-md backdrop-blur-sm">
+                {formatTime(currentTime)}
+              </span>
+              <span className="bg-black/30 px-2 py-0.5 rounded-md backdrop-blur-sm">
+                {formatTime(duration)}
+              </span>
             </div>
           </div>
 
@@ -646,10 +748,17 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
           <div className="px-4 pb-4 flex items-center justify-between">
             {/* Left side controls */}
             <div className="flex items-center space-x-4">
-              {/* Previous video button */}
+              {/* Previous video button with better visual feedback */}
               <button 
                 onClick={playPreviousVideo}
-                className="text-white hover:text-primary transition-colors focus:outline-none"
+                disabled={videos.findIndex(v => v.url === video.url) === 0}
+                className={cn(
+                  "p-2 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  "hover:bg-white/20 hover:scale-110 active:scale-95",
+                  videos.findIndex(v => v.url === video.url) === 0 
+                    ? "text-white/40 cursor-not-allowed" 
+                    : "text-white hover:text-primary"
+                )}
                 aria-label="Previous video"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -658,105 +767,118 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
                 </svg>
               </button>
               
-              {/* Play/pause */}
+              {/* Enhanced Play/pause button */}
               <button 
                 onClick={togglePlay} 
-                className="text-white hover:text-primary transition-colors focus:outline-none"
+                className="p-3 rounded-full bg-primary/20 hover:bg-primary/30 backdrop-blur-md text-white hover:text-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 hover:scale-110 active:scale-95 group"
                 aria-label={playing ? "Pause" : "Play"}
               >
-                {playing ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                    <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                    <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" />
-                  </svg>
-                )}
+                <div className="relative">
+                  {playing ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 transition-transform group-hover:scale-110">
+                      <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 transition-transform group-hover:scale-110">
+                      <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" />
+                    </svg>
+                  )}
+                </div>
               </button>
               
-              {/* Skip backward 10s */}
+              {/* Skip buttons with consistent design */}
               <button 
                 onClick={() => seek(currentTime - 10)}
-                className="text-white hover:text-primary transition-colors focus:outline-none"
+                className="p-2 rounded-full text-white hover:text-primary hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 hover:scale-110 active:scale-95 relative group"
                 aria-label="Skip back 10 seconds"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M9.195 18.44c1.25.713 2.805-.19 2.805-1.629v-2.34l6.945 3.968c1.25.714 2.805-.188 2.805-1.628V8.688c0-1.44-1.555-2.342-2.805-1.628L12 11.03v-2.34c0-1.44-1.555-2.343-2.805-1.629l-7.108 4.062c-1.26.72-1.26 2.536 0 3.256l7.108 4.061z" />
                 </svg>
+                <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-black/80 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  -10s
+                </span>
               </button>
               
-              {/* Skip forward 10s */}
               <button 
                 onClick={() => seek(currentTime + 10)}
-                className="text-white hover:text-primary transition-colors focus:outline-none"
+                className="p-2 rounded-full text-white hover:text-primary hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 hover:scale-110 active:scale-95 relative group"
                 aria-label="Skip forward 10 seconds"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" />
                 </svg>
+                <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs bg-black/80 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  +10s
+                </span>
               </button>
               
               {/* Volume control */}
-              <div className="relative">
+              <div className="relative group">
                 <button 
                   onClick={toggleMute} 
-                  onMouseEnter={() => setUiState(prev => ({...prev, isVolumeSliderOpen: true}))}
-                  className="text-white hover:text-primary transition-colors focus:outline-none"
+                  onMouseEnter={showVolumeSliderTemporarily}
+                  onMouseLeave={hideVolumeSlider}
+                  className="p-2 rounded-full text-white hover:text-primary hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 hover:scale-110 active:scale-95"
                   aria-label={muted ? "Unmute" : "Mute"}
                 >
                   {muted || volume === 0 ? (
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
-                      <path d="M18.584 18.894a.75.75 0 001.06 0 9 9 0 000-12.788.75.75 0 00-1.06 1.06 7.5 7.5 0 010 10.668.75.75 0 000 1.06z" />
-                      <path d="M15.932 15.874a.75.75 0 00.578-1.359A6 6 0 1001.555 9.01a.75.75 0 00-1.352.647A7.5 7.5 0 0115.932 15.874z" />
-                      <path d="M15.432 16.87a.75.75 0 10.598-1.373A7.493 7.493 0 008.25 4.5a.75.75 0 00-.75.75v11.25c0 .414.336.75.75.75h5.25a7.493 7.493 0 002.932-.38z" />
-                    </svg>
-                  ) : volume < 0.5 ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM10.5 12.75a.75.75 0 000-1.5.75.75 0 000 1.5z" />
-                      <path d="M10.5 6a.75.75 0 000 1.5.75.75 0 000-1.5zm0 9.75a.75.75 0 000 1.5.75.75 0 000-1.5zM10.5 9.75a.75.75 0 000-1.5.75.75 0 000 1.5zm0 3a.75.75 0 000 1.5.75.75 0 000-1.5zM3.75 10.5a.75.75 0 000 1.5.75.75 0 000-1.5zm1.5-1.5a.75.75 0 000-1.5.75.75 0 000 1.5zm0 3a.75.75 0 000 1.5.75.75 0 000-1.5zm3-3a.75.75 0 000 1.5.75.75 0 000-1.5z" />
+                      <path d="M3.28 2.22a.75.75 0 00-1.06 1.06l16.5 16.5a.75.75 0 101.06-1.06L3.28 2.22zM13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l1.684 1.684L3.28 21.22a.75.75 0 101.06 1.06L13.5 13.12V4.06z" />
                     </svg>
                   ) : (
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM10.5 12.75a.75.75 0 000-1.5.75.75 0 000 1.5z" />
+                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06z" />
+                      {volume > 0.5 && (
+                        <path d="M18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
+                      )}
                     </svg>
                   )}
                 </button>
                 
-                {/* Volume slider */}
+                {/* Horizontal volume slider */}
                 <div 
                   className={cn(
-                    "absolute bottom-full left-0 mb-2 py-2 px-3 rounded-md bg-black/80 backdrop-blur-md border border-white/10 shadow-lg transform -translate-x-1/4 transition-all",
-                    isVolumeSliderOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                    "absolute left-full top-1/2 transform -translate-y-1/2 ml-3 transition-all duration-300",
+                    isVolumeSliderOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
                   )}
-                  onMouseEnter={() => setUiState(prev => ({...prev, isVolumeSliderOpen: true}))}
-                  onMouseLeave={() => setUiState(prev => ({...prev, isVolumeSliderOpen: false}))}
+                  onMouseEnter={keepVolumeSliderOpen}
+                  onMouseLeave={hideVolumeSlider}
                 >
-                  <div className="flex flex-col items-center w-28">
-                    <div className="w-full h-20 flex flex-col justify-between items-center">
-                      <div className="relative w-1.5 h-full bg-white/30 rounded-full">
-                        <div 
-                          className="absolute bottom-0 left-0 right-0 bg-primary rounded-full"
-                          style={{ height: `${volume * 100}%` }}
-                        ></div>
-                        
-                        {/* Invisible input for better accessibility */}
-                        <input 
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          value={muted ? 0 : volume}
-                          onChange={(e) => adjustVolume(parseFloat(e.target.value))}
-                          className="absolute inset-0 w-6 -left-2 h-full opacity-0 cursor-pointer"
-                          style={{
-                            writingMode: 'vertical-lr',
-                            direction: 'rtl'
+                  <div className="bg-black/90 backdrop-blur-md border border-white/20 rounded-lg p-3 shadow-xl">
+                    <div className="flex items-center space-x-3">
+                      {/* Volume icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white/70 flex-shrink-0">
+                        <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06z" />
+                      </svg>
+                      
+                      {/* Horizontal slider with enhanced interaction */}
+                      <div 
+                        className="relative w-20 h-2"
+                        onMouseDown={keepVolumeSliderOpen}
+                        onMouseMove={keepVolumeSliderOpen}
+                        onTouchStart={keepVolumeSliderOpen}
+                        onTouchMove={keepVolumeSliderOpen}
+                      >
+                        <Slider
+                          value={[muted ? 0 : volume]}
+                          onValueChange={(value) => {
+                            keepVolumeSliderOpen() // Keep slider open while changing value
+                            adjustVolume(value[0])
                           }}
+                          onPointerDown={keepVolumeSliderOpen}
+                          onPointerMove={keepVolumeSliderOpen}
+                          max={1}
+                          min={0}
+                          step={0.01}
+                          className="w-full"
                         />
                       </div>
-                      <span className="text-white text-xs mt-2">{Math.round((muted ? 0 : volume) * 100)}%</span>
+                      
+                      {/* Volume percentage */}
+                      <span className="text-white text-xs font-medium bg-black/50 px-2 py-1 rounded min-w-[3rem] text-center">
+                        {Math.round((muted ? 0 : volume) * 100)}%
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -816,7 +938,7 @@ const VideoPlayer = ({ video, videos, setVideos, onSelectVideo }) => {
                   </svg>
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M15 3.75a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0V5.56l-3.97 3.97a.75.75 0 11-1.06-1.06l3.97-3.97h-2.69a.75.75 0 01-.75-.75zm-12 0A.75.75 0 013.75 3h4.5a.75.75 0 010 1.5H5.56l3.97 3.97a.75.75 0 01-1.06 1.06L4.5 5.56v2.69a.75.75 0 01-1.5 0v-4.5zm11.47 11.78a.75.75 0 111.06-1.06l3.97 3.97v-2.69a.75.75 0 011.5 0v4.5a.75.75 0 01-.75.75h-4.5a.75.75 0 010-1.5h2.69l-3.97-3.97zm-4.94-1.06a.75.75 0 010 1.06L5.56 19.5h2.69a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75v-4.5a.75.75 0 011.5 0v2.69l3.97-3.97a.75.75 0 011.06 0z" />
+                    <path fillRule="evenodd" d="M15 3.75a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0V5.56l-3.97 3.97a.75.75 0 11-1.06-1.06l3.97-3.97h-2.69a.75.75 0 01-.75-.75zm-12 0A.75.75 0 013.75 3h4.5a.75.75 0 010 1.5H5.56l3.97 3.97a.75.75 0 01-1.06 1.06L4.5 5.56v2.69a.75.75 0 01-1.5 0v-4.5zm11.47 11.78a.75.75 0 111.06-1.06l3.97 3.97v-2.69a.75.75 0 011.5 0v4.5a.75.75 0 01-.75.75h-4.5a.75.75 0 01-.75-1.5h2.69l-3.97-3.97zm-4.94-1.06a.75.75 0 010 1.06L5.56 19.5h2.69a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75v-4.5a.75.75 0 011.5 0v2.69l3.97-3.97a.75.75 0 011.06 0z" />
                   </svg>
                 )}
               </button>
