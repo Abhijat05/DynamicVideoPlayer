@@ -188,18 +188,16 @@ const FileImport = ({ onImport }) => {
         <AccordionItem value="item-1" className="border-b-0">
           <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/30 group">
             <div className="flex items-center">
+              <div className="mr-2 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <FileUp size={16} className="text-primary" />
+              </div>
               <h2 className="text-lg font-semibold">Add Videos</h2>
-              {importCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {importCount} imported
-                </Badge>
-              )}
             </div>
           </AccordionTrigger>
           <AccordionContent className="pt-2">
             <div className="px-4 pb-4">
               <Tabs defaultValue="url" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
                   <TabsTrigger value="url" className="flex items-center gap-1.5">
                     <Plus className="h-4 w-4" />
                     <span>Add URL</span>
@@ -207,6 +205,12 @@ const FileImport = ({ onImport }) => {
                   <TabsTrigger value="file" className="flex items-center gap-1.5">
                     <FileUp className="h-4 w-4" />
                     <span>Import File</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="local" className="flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Local File</span>
                   </TabsTrigger>
                 </TabsList>
                 
@@ -301,6 +305,34 @@ const FileImport = ({ onImport }) => {
                         <span>Each line: <code className="text-xs bg-muted-foreground/20 px-1 rounded">name,url</code> or just <code className="text-xs bg-muted-foreground/20 px-1 rounded">url</code></span>
                       </li>
                     </ul>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="local" className="mt-0">
+                  <div className="space-y-4">
+                    <Label htmlFor="localVideoFile">Select video from your device</Label>
+                    <Input
+                      id="localVideoFile"
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          const url = URL.createObjectURL(file);
+                          const name = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
+                          onImport([{ name, url, isLocalFile: true }]);
+                          e.target.value = ''; // Reset for repeated selections
+                        }
+                      }}
+                    />
+                    <div className="bg-muted/50 p-3 rounded-md text-sm">
+                      <p className="flex items-center text-muted-foreground">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Selected videos are not uploaded anywhere and remain on your device
+                      </p>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
