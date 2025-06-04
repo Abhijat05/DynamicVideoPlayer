@@ -8,14 +8,69 @@ import {
   setupThemeListener 
 } from '@/utils/localStorage'
 import { cn } from '@/lib/utils'
-import ThemeToggle from '@/components/ui/ThemeToggle'
+import Navbar from '@/components/ui/Navbar'
+import { motion, fadeIn } from '@/utils/motion'
+import { Search, X } from 'lucide-react'
+
+const RecentlyPlayed = ({ videos, onVideoSelect, currentVideoUrl }) => {
+  // Get recently played videos (with lastPlayed date, sorted by most recent)
+  const recentVideos = videos
+    .filter(video => video.lastPlayed)
+    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed))
+    .slice(0, 5);
+  
+  if (recentVideos.length === 0) return null;
+  
+  return (
+    <motion.div 
+      variants={fadeIn('up')}
+      initial="hidden"
+      animate="visible"
+      className="bg-card rounded-lg p-4 shadow-md border border-border mb-6"
+    >
+      <h2 className="text-lg font-semibold mb-3">Recently Played</h2>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+        {recentVideos.map(video => (
+          <div 
+            key={video.url}
+            className={cn(
+              "flex-shrink-0 w-32 cursor-pointer rounded-md overflow-hidden border transition-all",
+              currentVideoUrl === video.url 
+                ? "border-primary ring-1 ring-primary" 
+                : "border-border hover:border-primary/30"
+            )}
+            onClick={() => onVideoSelect(video)}
+          >
+            <div className="bg-secondary aspect-video flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="6 3 20 12 6 21 6 3"></polygon>
+              </svg>
+            </div>
+            <div className="p-2">
+              <p className="text-xs font-medium line-clamp-1">{video.name}</p>
+              {video.progress > 0 && (
+                <div className="mt-1 h-1 bg-secondary rounded-full">
+                  <div 
+                    className="h-full bg-primary rounded-full" 
+                    style={{ width: `${video.progress * 100}%` }}
+                  ></div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
 
 const App = () => {
   const [videos, setVideos] = useState([])
   const [currentVideo, setCurrentVideo] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [theme, setTheme] = useState('light')
-  
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
+
   // Load saved videos and theme on mount
   useEffect(() => {
     // Load videos
@@ -81,14 +136,9 @@ const App = () => {
       "min-h-screen bg-background text-foreground",
       "transition-colors duration-300"
     )}>
-      <div className="container mx-auto px-4 py-8">
-        <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-500 text-transparent bg-clip-text">
-            React Video Player
-          </h1>
-          <ThemeToggle theme={theme} setTheme={setThemeWithPersistence} />
-        </header>
-        
+      <Navbar theme={theme} setTheme={setThemeWithPersistence} />
+      
+      <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             {currentVideo ? (
@@ -96,6 +146,7 @@ const App = () => {
                 video={currentVideo}
                 videos={videos}
                 setVideos={setVideos}
+                onSelectVideo={setCurrentVideo}
               />
             ) : (
               <div className="bg-card text-card-foreground rounded-lg p-8 shadow-md border border-border flex flex-col items-center justify-center min-h-[300px]">
@@ -114,29 +165,21 @@ const App = () => {
           </div>
           
           <div className="space-y-6">
+            <div className="lg:col-span-3">
+              <RecentlyPlayed 
+                videos={videos}
+                onVideoSelect={setCurrentVideo}
+                currentVideoUrl={currentVideo?.url}
+              />
+            </div>
+            
             <FileImport onImport={handleImportVideos} />
             
-            <div className="bg-card text-card-foreground p-4 rounded-lg shadow-md border border-border">
-              <div className="relative mb-4">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search videos..."
-                  className={cn(
-                    "w-full py-2 pl-10 pr-4 bg-background border rounded-md",
-                    "focus:outline-none focus:ring-2 focus:ring-ring focus:border-input",
-                    "transition-colors"
-                  )}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+            <div className="bg-card text-card-foreground p-4 rounded-lg shadow-md border border-border video-list-container">
               <VideoList 
                 videos={videos}
                 searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
                 onVideoSelect={setCurrentVideo}
                 onDeleteVideo={handleDeleteVideo}
                 currentVideoUrl={currentVideo?.url}
@@ -144,6 +187,36 @@ const App = () => {
             </div>
           </div>
         </div>
+      </div>
+      
+      <div className="fixed bottom-16 right-4 z-30">
+        <div className={`space-y-2 mb-2 transition-all ${showQuickMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}>
+          <button 
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+            onClick={() => document.querySelector('input[placeholder*="Search videos"]')?.focus()}
+            title="Search Videos"
+          >
+            <Search size={20} />
+          </button>
+          <button 
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+            onClick={() => document.querySelector('summary, [role="button"]')?.click()}
+            title="Import Videos"
+          >
+            <span className="text-lg font-bold">+</span>
+          </button>
+        </div>
+        
+        <button
+          className="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          onClick={() => setShowQuickMenu(!showQuickMenu)}
+        >
+          {showQuickMenu ? (
+            <X size={24} />
+          ) : (
+            <span className="text-lg font-bold">•••</span>
+          )}
+        </button>
       </div>
     </div>
   )
