@@ -1,4 +1,3 @@
-// filepath: d:\Code PlayGround\DynamicVideoPlayer\src\components\ui\input.jsx
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
