@@ -1,0 +1,236 @@
+import React, { useState, useEffect } from 'react';
+import { Play, Pause, Volume2, VolumeX, SkipForward, SkipBack, Maximize } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+
+const VideoControls = ({ player, playing, onPlayPause, onSeek, duration, currentTime }) => {
+  const [volume, setVolume] = useState(0.8);
+  const [muted, setMuted] = useState(false);
+  const [seeking, setSeeking] = useState(false);
+  const [seekValue, setSeekValue] = useState(0);
+  const [showControls, setShowControls] = useState(true);
+
+  useEffect(() => {
+    if (!seeking) {
+      setSeekValue(currentTime);
+    }
+  }, [currentTime, seeking]);
+
+  // Auto-hide controls after inactivity
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (playing) {
+        setShowControls(false);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [playing, showControls]);
+
+  const handlePlayPause = () => {
+    if (onPlayPause) onPlayPause(!playing);
+  };
+
+  const formatTime = (seconds) => {
+    if (isNaN(seconds) || seconds === Infinity) return '0:00';
+    
+    const date = new Date(seconds * 1000);
+    const hh = date.getUTCHours();
+    const mm = date.getUTCMinutes();
+    const ss = date.getUTCSeconds().toString().padStart(2, '0');
+    
+    if (hh) {
+      return `${hh}:${mm.toString().padStart(2, '0')}:${ss}`;
+    }
+    return `${mm}:${ss}`;
+  };
+
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    setMuted(newVolume === 0);
+    
+    if (player && player.setVolume) {
+      player.setVolume(newVolume);
+    }
+  };
+
+  const toggleMute = () => {
+    const newMuted = !muted;
+    setMuted(newMuted);
+    
+    if (player && player.setMuted) {
+      player.setMuted(newMuted);
+    }
+  };
+
+  const handleSeekMouseDown = () => {
+    setSeeking(true);
+  };
+
+  const handleSeekChange = (e) => {
+    setSeekValue(parseFloat(e.target.value));
+    setShowControls(true);
+  };
+
+  const handleSeekMouseUp = (e) => {
+    setSeeking(false);
+    const seekTime = parseFloat(e.target.value);
+    
+    if (player && player.seekTo) {
+      player.seekTo(seekTime);
+    }
+    
+    if (onSeek) {
+      onSeek(seekTime);
+    }
+  };
+
+  const handleSkipBack = () => {
+    if (player && player.seekTo) {
+      const newTime = Math.max(currentTime - 10, 0);
+      player.seekTo(newTime);
+      if (onSeek) onSeek(newTime);
+    }
+  };
+
+  const handleSkipForward = () => {
+    if (player && player.seekTo) {
+      const newTime = Math.min(currentTime + 10, duration || 0);
+      player.seekTo(newTime);
+      if (onSeek) onSeek(newTime);
+    }
+  };
+
+  const handleFullscreen = () => {
+    const elem = document.querySelector('.player-container');
+    if (elem) {
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  // Calculate progress percentage
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <motion.div 
+      className="flex flex-col bg-card rounded-md shadow p-2"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: showControls ? 1 : 0.3 }}
+      onMouseEnter={() => setShowControls(true)}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Progress bar with animated fill */}
+      <div className="mb-2 relative h-1.5 bg-muted rounded-lg overflow-hidden">
+        <motion.div 
+          className="absolute top-0 left-0 h-full bg-primary rounded-lg"
+          style={{ width: `${progress}%` }}
+          initial={{ width: '0%' }}
+          animate={{ width: `${progress}%` }}
+          transition={{ type: "tween" }}
+        />
+        <input 
+          type="range"
+          min={0}
+          max={duration || 1}
+          step="any"
+          value={seeking ? seekValue : (isNaN(seekValue) ? 0 : seekValue)}
+          onMouseDown={handleSeekMouseDown}
+          onChange={handleSeekChange}
+          onMouseUp={handleSeekMouseUp}
+          onTouchStart={handleSeekMouseDown}
+          onTouchEnd={handleSeekMouseUp}
+          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground mt-3">
+          <span>{formatTime(seekValue)}</span>
+          <span>{formatTime(duration || 0)}</span>
+        </div>
+      </div>
+      
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleSkipBack}
+            aria-label="Skip back 10 seconds"
+          >
+            <SkipBack size={20} />
+          </Button>
+          
+          <Button
+            size="icon"
+            variant={playing ? "outline" : "default"}
+            onClick={handlePlayPause}
+            className="rounded-full w-11 h-11"
+            aria-label={playing ? 'Pause' : 'Play'}
+          >
+            {playing ? (
+              <Pause size={20} className="text-primary-foreground" />
+            ) : (
+              <Play size={20} className="text-primary-foreground" />
+            )}
+          </Button>
+          
+          <Button
+            size="icon" 
+            variant="ghost"
+            onClick={handleSkipForward}
+            aria-label="Skip forward 10 seconds"
+          >
+            <SkipForward size={20} />
+          </Button>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={toggleMute}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          </Button>
+          
+          <div className="w-24 hidden sm:block relative h-1.5 bg-muted rounded-lg overflow-hidden">
+            <motion.div 
+              className="absolute top-0 left-0 h-full bg-primary"
+              style={{ width: `${muted ? 0 : volume * 100}%` }}
+              initial={{ width: '80%' }}
+              animate={{ width: `${muted ? 0 : volume * 100}%` }}
+              transition={{ type: "tween" }}
+            />
+            <input 
+              type="range"
+              min={0}
+              max={1}
+              step="any"
+              value={muted ? 0 : volume}
+              onChange={handleVolumeChange}
+              className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+            />
+          </div>
+          
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleFullscreen}
+            aria-label="Toggle fullscreen"
+          >
+            <Maximize size={20} />
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+export default VideoControls;

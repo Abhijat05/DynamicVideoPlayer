@@ -1,76 +1,102 @@
-import { cn } from '@/lib/utils'
-import { createContext, useContext, useState } from 'react'
+import * as React from "react"
+import { Cross2Icon } from "@radix-ui/react-icons"
+import * as ToastPrimitives from "@radix-ui/react-toast"
+import { cva } from "class-variance-authority"
 
-const ToastContext = createContext({})
+import { cn } from "@/lib/utils"
 
-export const ToastProvider = ({ children }) => {
-  const [toasts, setToasts] = useState([])
+const ToastProvider = ToastPrimitives.Provider
 
-  const showToast = (message, type = 'default', duration = 3000) => {
-    const id = Date.now()
-    
-    setToasts(prev => [...prev, { id, message, type, duration }])
-    
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id))
-    }, duration)
+const ToastViewport = React.forwardRef(({ className, ...props }, ref) => (
+  <ToastPrimitives.Viewport
+    ref={ref}
+    className={cn(
+      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      className
+    )}
+    {...props}
+  />
+))
+ToastViewport.displayName = ToastPrimitives.Viewport.displayName
+
+const toastVariants = cva(
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  {
+    variants: {
+      variant: {
+        default: "border bg-background text-foreground",
+        destructive:
+          "destructive group border-destructive bg-destructive text-destructive-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
   }
-  
+)
+
+const Toast = React.forwardRef(({ className, variant, ...props }, ref) => {
   return (
-    <ToastContext.Provider value={{ showToast }}>
-      {children}
-      
-      {/* Toast container */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
-        {toasts.map(toast => (
-          <div 
-            key={toast.id}
-            className={cn(
-              "p-3 rounded-md shadow-lg backdrop-blur-sm animate-in slide-in-from-right",
-              "min-w-[200px] max-w-[300px] border",
-              "z-[100]", // Ensure highest z-index
-              toast.type === 'success' && "bg-green-500/20 border-green-500 text-green-700 dark:text-green-200",
-              toast.type === 'error' && "bg-red-500/20 border-red-500 text-red-700 dark:text-red-200",
-              toast.type === 'default' && "bg-card/80 border-border text-foreground"
-            )}
-          >
-            <div className="flex items-start gap-2">
-              {toast.type === 'success' && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              )}
-              
-              {toast.type === 'error' && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              )}
-              
-              <div className="flex-1">
-                {toast.message}
-              </div>
-              
-              <button 
-                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                className="text-foreground/50 hover:text-foreground"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
+    <ToastPrimitives.Root
+      ref={ref}
+      className={cn(toastVariants({ variant }), className)}
+      {...props}
+    />
   )
-}
+})
+Toast.displayName = ToastPrimitives.Root.displayName
 
-export const useToast = () => {
-  const context = useContext(ToastContext)
-  if (context === undefined) {
-    throw new Error('useToast must be used within a ToastProvider')
-  }
-  return context
+const ToastAction = React.forwardRef(({ className, ...props }, ref) => (
+  <ToastPrimitives.Action
+    ref={ref}
+    className={cn(
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+      className
+    )}
+    {...props}
+  />
+))
+ToastAction.displayName = ToastPrimitives.Action.displayName
+
+const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
+  <ToastPrimitives.Close
+    ref={ref}
+    className={cn(
+      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      className
+    )}
+    toast-close=""
+    {...props}
+  >
+    <Cross2Icon className="h-4 w-4" />
+  </ToastPrimitives.Close>
+))
+ToastClose.displayName = ToastPrimitives.Close.displayName
+
+const ToastTitle = React.forwardRef(({ className, ...props }, ref) => (
+  <ToastPrimitives.Title
+    ref={ref}
+    className={cn("text-sm font-semibold [&+div]:text-xs", className)}
+    {...props}
+  />
+))
+ToastTitle.displayName = ToastPrimitives.Title.displayName
+
+const ToastDescription = React.forwardRef(({ className, ...props }, ref) => (
+  <ToastPrimitives.Description
+    ref={ref}
+    className={cn("text-sm opacity-90", className)}
+    {...props}
+  />
+))
+ToastDescription.displayName = ToastPrimitives.Description.displayName
+
+export {
+  ToastProvider,
+  ToastViewport,
+  Toast,
+  ToastTitle,
+  ToastDescription,
+  ToastClose,
+  ToastAction,
 }
