@@ -8,6 +8,7 @@ export function VideoProvider({ children }) {
   const [videos, setVideos] = useLocalStorage('videos', []);
   const [collections, setCollections] = useLocalStorage('collections', {});
   const [recentlyPlayed, setRecentlyPlayed] = useLocalStorage('recentlyPlayed', []);
+  const [watchProgress, setWatchProgress] = useLocalStorage('watchProgress', {}); // New: track progress per video
   const [currentVideo, setCurrentVideo] = useState(null);
   
   // Effect to organize videos into collections
@@ -49,6 +50,38 @@ export function VideoProvider({ children }) {
     });
   };
 
+  // New: Save watch progress
+  const handleProgressUpdate = (videoUrl, currentTime, duration) => {
+    if (!videoUrl || !duration || duration === 0) return;
+    
+    const progressPercent = (currentTime / duration) * 100;
+    
+    // Only save if progress is meaningful (more than 5% and less than 95%)
+    if (progressPercent > 5 && progressPercent < 95) {
+      setWatchProgress(prev => ({
+        ...prev,
+        [videoUrl]: {
+          currentTime,
+          duration,
+          progressPercent,
+          lastWatched: new Date().toISOString()
+        }
+      }));
+    } else if (progressPercent >= 95) {
+      // Mark as completed - remove progress
+      setWatchProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[videoUrl];
+        return newProgress;
+      });
+    }
+  };
+
+  // New: Get saved progress for a video
+  const getVideoProgress = (videoUrl) => {
+    return watchProgress[videoUrl] || null;
+  };
+
   const handleAddVideo = (video) => {
     setVideos(prev => {
       // Check if video already exists
@@ -75,9 +108,12 @@ export function VideoProvider({ children }) {
       collections,
       recentlyPlayed,
       currentVideo,
+      watchProgress,
       handleVideoSelect,
       handleAddVideo,
-      handleImportVideos
+      handleImportVideos,
+      handleProgressUpdate,
+      getVideoProgress
     }}>
       {children}
     </VideoContext.Provider>
