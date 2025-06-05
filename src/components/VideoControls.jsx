@@ -127,7 +127,7 @@ const VideoControls = ({ player, playing, onPlayPause, onSeek, duration, current
       transition={{ duration: 0.3 }}
     >
       {/* Progress bar with animated fill */}
-      <div className="mb-2 relative h-1.5 bg-muted rounded-lg overflow-hidden">
+      <div className="mb-2 relative h-2 bg-muted rounded-lg overflow-hidden">
         <motion.div 
           className="absolute top-0 left-0 h-full bg-primary rounded-lg"
           style={{ width: `${progress}%` }}
@@ -148,63 +148,65 @@ const VideoControls = ({ player, playing, onPlayPause, onSeek, duration, current
           onTouchEnd={handleSeekMouseUp}
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-muted-foreground mt-3">
+        <div className="flex justify-between text-xs text-muted-foreground mt-2">
           <span>{formatTime(seekValue)}</span>
           <span>{formatTime(duration || 0)}</span>
         </div>
       </div>
       
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      {/* Controls - now in a more compact layout */}
+      <div className="flex items-center justify-between flex-wrap gap-y-2">
+        <div className="flex items-center space-x-2">
           <Button
-            size="icon"
+            size="sm"
             variant="ghost"
             onClick={handleSkipBack}
             aria-label="Skip back 10 seconds"
+            className="h-8 w-8 p-0"
           >
-            <SkipBack size={20} />
+            <SkipBack size={16} />
           </Button>
           
           <Button
-            size="icon"
+            size="sm"
             variant={playing ? "outline" : "default"}
             onClick={handlePlayPause}
-            className="rounded-full w-11 h-11"
+            className="rounded-full w-10 h-10"
             aria-label={playing ? 'Pause' : 'Play'}
           >
             {playing ? (
-              <Pause size={20} className="text-primary-foreground" />
+              <Pause size={18} />
             ) : (
-              <Play size={20} className="text-primary-foreground" />
+              <Play size={18} />
             )}
           </Button>
           
           <Button
-            size="icon" 
+            size="sm"
             variant="ghost"
             onClick={handleSkipForward}
             aria-label="Skip forward 10 seconds"
+            className="h-8 w-8 p-0"
           >
-            <SkipForward size={20} />
+            <SkipForward size={16} />
           </Button>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <Button
-            size="icon"
+            size="sm"
             variant="ghost"
             onClick={toggleMute}
             aria-label={muted ? 'Unmute' : 'Mute'}
+            className="h-8 w-8 p-0"
           >
-            {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </Button>
           
-          <div className="w-24 hidden sm:block relative h-1.5 bg-muted rounded-lg overflow-hidden">
+          <div className="w-16 hidden sm:block relative h-1.5 bg-muted rounded-lg overflow-hidden">
             <motion.div 
               className="absolute top-0 left-0 h-full bg-primary"
               style={{ width: `${muted ? 0 : volume * 100}%` }}
-              initial={{ width: '80%' }}
               animate={{ width: `${muted ? 0 : volume * 100}%` }}
               transition={{ type: "tween" }}
             />
@@ -220,12 +222,13 @@ const VideoControls = ({ player, playing, onPlayPause, onSeek, duration, current
           </div>
           
           <Button
-            size="icon"
+            size="sm"
             variant="ghost"
             onClick={handleFullscreen}
             aria-label="Toggle fullscreen"
+            className="h-8 w-8 p-0"
           >
-            <Maximize size={20} />
+            <Maximize size={16} />
           </Button>
         </div>
       </div>

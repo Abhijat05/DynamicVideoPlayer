@@ -21,12 +21,12 @@ const LibrarySection = () => {
 
   return (
     <motion.div 
-      className="space-y-6"
+      className="space-y-4"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
-      {/* Recently Played Section */}
+      {/* First priority: Recently Played for quick access */}
       <Card>
         <CardHeader className="pb-2">
           <h2 className="text-xl font-semibold">Recently Played</h2>
@@ -40,7 +40,33 @@ const LibrarySection = () => {
         </CardContent>
       </Card>
       
-      {/* Combined Add Video & Import Section */}
+      {/* Second priority: Main video library with tabs */}
+      <Card>
+        <CardContent className="p-4">
+          <Tabs defaultValue="videos">
+            <TabsList className="grid grid-cols-3 mb-4 w-full">
+              <TabsTrigger value="videos">All Videos</TabsTrigger>
+              <TabsTrigger value="collections">Collections</TabsTrigger>
+              <TabsTrigger value="recent">Recent</TabsTrigger>
+            </TabsList>
+            <TabsContent value="videos">
+              <VideoList videos={videos} onVideoSelect={handleVideoSelect} />
+            </TabsContent>
+            <TabsContent value="collections">
+              <CollectionList collections={collections} onVideoSelect={handleVideoSelect} />
+            </TabsContent>
+            <TabsContent value="recent">
+              <RecentlyPlayed 
+                recentVideos={recentlyPlayed} 
+                onVideoSelect={handleVideoSelect} 
+                compact={false}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+      
+      {/* Third priority: Add new content */}
       <Card>
         <CardHeader className="pb-2">
           <h2 className="text-xl font-semibold">Add Videos</h2>
@@ -56,24 +82,6 @@ const LibrarySection = () => {
             </TabsContent>
             <TabsContent value="import">
               <FileImporter onImportVideos={handleImportVideos} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-      
-      {/* Video Library Tabs */}
-      <Card>
-        <CardContent className="p-4">
-          <Tabs defaultValue="collections">
-            <TabsList className="grid grid-cols-2 mb-4 w-full">
-              <TabsTrigger value="collections">Collections</TabsTrigger>
-              <TabsTrigger value="videos">Videos</TabsTrigger>
-            </TabsList>
-            <TabsContent value="collections">
-              <CollectionList collections={collections} onVideoSelect={handleVideoSelect} />
-            </TabsContent>
-            <TabsContent value="videos">
-              <VideoList videos={videos} onVideoSelect={handleVideoSelect} />
             </TabsContent>
           </Tabs>
         </CardContent>

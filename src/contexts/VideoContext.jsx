@@ -24,15 +24,8 @@ export function VideoProvider({ children }) {
       }
     });
     
-    // Only keep collections with more than one video
-    const filteredCollections = {};
-    Object.entries(newCollections).forEach(([name, videoList]) => {
-      if (videoList.length > 1) {
-        filteredCollections[name] = videoList;
-      }
-    });
-    
-    setCollections(filteredCollections);
+    // Include all collections, even those with a single video
+    setCollections(newCollections);
   }, [videos, setCollections]);
 
   const handleVideoSelect = (video) => {

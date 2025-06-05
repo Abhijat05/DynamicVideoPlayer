@@ -1,106 +1,152 @@
-# React Video Player
+# Dynamic Video Player
 
-React Video Player is a modern, feature-rich web application for managing and watching your video collection. Built with React and TailwindCSS, it provides an intuitive interface with advanced playback controls, progress tracking, and theme customization. Users can import videos via URLs or files, organize and search their library, and enjoy a responsive experience across devices. The app saves your video progress and preferences using localStorage, ensuring a seamless and personalized viewing experience.
+Dynamic Video Player is a modern web application designed for managing and playing a personal collection of videos from various online sources. It offers a user-friendly interface with features like video organization, playback resumption, and theme customization.
 
-## Features
+<!-- Optional: Add a GIF or screenshot of the application here -->
+<!-- ![App Screenshot](link_to_your_screenshot.png) -->
 
-- **Video playback** with custom controls (play/pause, seek, volume, fullscreen)
-- **Progress tracking** - automatically saves your watching progress for each video
-- **Dark/Light mode** with theme persistence and system preference support
-- **Video management**:
-  - Search and filter videos
-  - Sort videos alphabetically or by last played date
-  - Delete unwanted videos
-  - Import videos from various sources
-- **Advanced playback controls**:
-  - Adjustable playback speed (0.5x to 2x)
-  - Keyboard shortcuts for common actions (play/pause, seek, volume, mute, fullscreen)
-  - Picture-in-Picture support
-- **Import options**:
-  - Add individual videos with URLs
-  - Import multiple videos from JSON files (array of `{ name, url }`)
-  - Import multiple videos from text files (one URL or "name,url" per line)
-- **Responsive design** for desktop and mobile devices
+## ✨ Features
 
-## Tech Stack
+-   **Add Videos via URL:** Easily add videos by pasting their direct URL.
+-   **File Import:** Import video lists from JSON or TXT files.
+-   **Automatic Collections:** Videos are automatically grouped into collections based on their names.
+-   **Recently Played:** Quickly access videos you've watched recently.
+-   **Resume Playback:** Continue watching videos from where you left off.
+-   **Watch Progress Tracking:** Visual indicators show how much of a video you've watched.
+-   **Theme Customization:** Switch between Light, Dark, and System themes.
+-   **Responsive Design:** Enjoy a seamless experience across different screen sizes.
+-   **Intuitive Controls:** Standard video player controls including play/pause, seek, volume, and fullscreen.
 
-- [React](https://react.dev/) - UI library
-- [Vite](https://vitejs.dev/) - Build tool and development server
-- [TailwindCSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [LocalStorage API](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) - State persistence
+## 🚀 Tech Stack
 
-## Getting Started
+-   **Frontend:** React (v19) with Vite
+-   **Styling:** Tailwind CSS
+-   **UI Components:** shadcn/ui, Radix UI
+-   **State Management:** React Context API (`VideoContext`, `PlayerContext`)
+-   **Video Playback:** `react-player`
+-   **Animations:** Framer Motion
+-   **Icons:** Lucide React
+-   **Local Storage:** Custom `useLocalStorage` hook for persistence
+-   **Linting:** ESLint
+
+## 📂 Project Structure
+
+```
+DynamicVideoPlayer/
+├── public/               # Static assets
+├── src/
+│   ├── components/       # UI components
+│   │   ├── layout/       # Main layout structure (MainLayout.jsx)
+│   │   ├── library/      # Components for the library section (LibrarySection.jsx)
+│   │   ├── player/       # Components for the player section (PlayerSection.jsx)
+│   │   └── ui/           # Generic UI elements from shadcn/ui (Button, Card, etc.)
+│   ├── contexts/         # React Context providers
+│   │   ├── PlayerContext.jsx # Manages player state (playing, duration, etc.)
+│   │   └── VideoContext.jsx  # Manages video data (list, collections, progress)
+│   ├── hooks/            # Custom React hooks (useLocalStorage.js)
+│   ├── lib/              # Utility functions (cn for classnames - utils.js)
+│   ├── utils/            # Helper functions (fileParser.js)
+│   ├── App.jsx           # Main application component
+│   ├── index.css         # Global CSS and Tailwind directives
+│   └── main.jsx          # Entry point of the React application
+├── .gitignore            # Specifies intentionally untracked files
+├── components.json       # shadcn/ui configuration
+├── eslint.config.js      # ESLint configuration
+├── index.html            # Main HTML file
+├── jsconfig.json         # JavaScript configuration (for path aliases)
+├── package.json          # Project metadata and dependencies
+├── postcss.config.js     # PostCSS configuration
+├── README.md             # This file
+├── tailwind.config.js    # Tailwind CSS configuration
+└── vite.config.js        # Vite configuration
+```
+
+## 🛠️ Getting Started
 
 ### Prerequisites
 
-- Node.js 18.x or higher
-- npm or yarn package manager
+-   Node.js (v18 or later recommended)
+-   npm or yarn
 
 ### Installation
 
-1. Clone the repository or download the source code
-2. Navigate to the project directory
-3. Install dependencies:
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repository-url>
+    cd DynamicVideoPlayer
+    ```
 
-```bash
-npm install
-# or
-yarn install
-```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
 
-### Development
+### Running the Application
 
-Run the development server:
+To start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
-This will start the development server at `http://localhost:5173/`
+The application will typically be available at `http://localhost:5173`.
 
 ### Building for Production
 
-Create a production build:
+To create a production-ready build:
 
 ```bash
 npm run build
-# or
-yarn build
 ```
 
-Preview the production build:
+The optimized static files will be generated in the `dist` directory.
 
-```bash
-npm run preview
-# or
-yarn preview
-```
+## 📜 Available Scripts
 
-## Usage
+In the project directory, you can run the following scripts:
 
-### Adding Videos
+-   `npm run dev`: Starts the development server with hot reloading.
+-   `npm run build`: Bundles the application for production.
+-   `npm run lint`: Lints the codebase using ESLint to check for code quality and style issues.
+-   `npm run preview`: Serves the production build locally to preview it before deployment.
 
-- **Manual entry**: Enter the video name (optional) and URL, then click "Add Video"
-- **File Import**: 
-  - JSON format: Upload a JSON file containing an array of objects with `name` and `url` properties
-  - Text format: Upload a text file with each line containing either just a URL or "name,url" format
+## 🧩 Key Components & Architecture
 
-### Playback Controls
+The application is structured around a few core concepts:
 
-- **Space**: Toggle play/pause
-- **Left/Right Arrow**: Seek backward/forward 10 seconds
-- **Up/Down Arrow**: Adjust volume
-- **M**: Mute/unmute
-- **F**: Toggle fullscreen
-- **Click on progress bar**: Jump to that position in the video
-- **Playback speed menu**: Change playback speed from 0.5x to 2x
-- **Picture-in-Picture**: Enable floating video window
+-   **[`src/App.jsx`](src/App.jsx):** The root component that orchestrates the main layout and global providers.
+-   **Layout ([`src/components/layout/MainLayout.jsx`](src/components/layout/MainLayout.jsx)):** Provides the overall page structure, including the header and theme integration. It wraps the application with necessary context providers.
+-   **Contexts:**
+    -   **[`VideoContext`](src/contexts/VideoContext.jsx):** Manages all video-related data, including the list of videos, collections, recently played items, and watch progress. It provides functions to add, import, and select videos, as well as update and retrieve watch progress.
+    -   **[`PlayerContext`](src/contexts/PlayerContext.jsx):** Handles the state of the video player itself, such as play/pause status, current playback time, video duration, and resume logic. It interacts with `VideoContext` to get current video information and saved progress.
+-   **Sections:**
+    -   **[`PlayerSection`](src/components/player/PlayerSection.jsx):** Contains the video player ([`VideoPlayer`](src/components/VideoPlayer.jsx)), playback controls ([`VideoControls`](src/components/VideoControls.jsx)), and information about the currently playing video. It also handles the "resume playback" prompt.
+    -   **[`LibrarySection`](src/components/library/LibrarySection.jsx):** Displays the video library, organized into tabs for all videos ([`VideoList`](src/components/VideoList.jsx)), collections ([`CollectionList`](src/components/CollectionList.jsx)), and recently played ([`RecentlyPlayed`](src/components/RecentlyPlayed.jsx)). It also includes forms for adding videos via URL ([`AddUrlForm`](src/components/AddUrlForm.jsx)) and importing from files ([`FileImporter`](src/components/FileImporter.jsx)).
+-   **UI Components ([`src/components/ui/`](src/components/ui/)):** Reusable UI elements, primarily from shadcn/ui, such as `Button`, `Card`, `Input`, `Tabs`, `Toaster`, etc.
+-   **Custom Hooks:**
+    -   **[`useLocalStorage`](src/hooks/useLocalStorage.js):** A hook to easily persist and retrieve state from the browser's local storage.
+-   **Utilities:**
+    -   **[`fileParser.js`](src/utils/fileParser.js):** Contains functions to parse video data from JSON and TXT files.
+    -   **[`utils.js`](src/lib/utils.js):** Includes helper functions like `cn` for merging Tailwind CSS classes.
 
-## Storage
+## ⚙️ Configuration
 
-The application uses localStorage to persist:
-- Video collection
-- Playback progress for each video
-- Theme preferences
+-   **Theme:** The selected theme (light, dark, system) is stored in local storage under the key `video-player-theme` (configurable in [`src/components/layout/MainLayout.jsx`](src/components/layout/MainLayout.jsx) via `ThemeProvider`).
+-   **Video Data:** All video metadata, collections, recently played lists, and watch progress are stored in local storage. Keys include `videos`, `collections`, `recentlyPlayed`, and `watchProgress`.
+-   **shadcn/ui:** Component configuration and aliases are defined in [`components.json`](components.json) and `jsconfig.json`.
+
+## 🤝 Contributing
+
+Contributions are welcome! If you have suggestions for improvements or find any bugs, please feel free to:
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/YourFeature` or `bugfix/YourBugfix`).
+3.  Make your changes.
+4.  Commit your changes (`git commit -m 'Add some feature'`).
+5.  Push to the branch (`git push origin feature/YourFeature`).
+6.  Open a Pull Request.
+
+Please ensure your code adheres to the existing style and that all tests pass.
+---

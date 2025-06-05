@@ -7,8 +7,9 @@ import { useVideo } from '@/contexts/VideoContext';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { cn } from '@/lib/utils';
 
-const PlayerSection = () => {
+const PlayerSection = ({ className, ...props }) => {
   const { currentVideo, getVideoProgress } = useVideo();
   const { 
     player, 
@@ -42,7 +43,16 @@ const PlayerSection = () => {
     if (player && savedProgress) {
       player.seekTo(savedProgress.currentTime);
       setShowResumePrompt(false);
+      handlePlayPause(true); // Start playback after resuming
     }
+  };
+
+  const handleStartOver = () => {
+    if (player) {
+      player.seekTo(0); // Seek to the beginning of the video
+    }
+    setShowResumePrompt(false);
+    handlePlayPause(true); // Start playback after dismissing prompt
   };
 
   const formatTime = (seconds) => {
@@ -54,7 +64,7 @@ const PlayerSection = () => {
   };
 
   return (
-    <div className="lg:col-span-2 space-y-6">
+    <div className={cn("lg:col-span-2 space-y-4", className)} {...props}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -68,21 +78,28 @@ const PlayerSection = () => {
           {currentVideo ? (
             <VideoPlayer 
               url={currentVideo.url}
-              playing={playing}
+              playing={playing && !showResumePrompt} // Only play if not showing resume prompt
               onProgress={handleProgress}
               onEnded={handleVideoEnded}
               onReady={handlePlayerReady}
             />
           ) : (
-            <div className="flex items-center justify-center h-full bg-muted/20">
-              <motion.p 
+            <div className="flex flex-col items-center justify-center h-full bg-muted/20 p-4">
+              <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="text-muted-foreground"
+                className="text-center"
               >
-                Select a video to play
-              </motion.p>
+                <svg className="w-16 h-16 mx-auto mb-4 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-muted-foreground">Select a video from your library to start playing</p>
+                <p className="text-xs text-muted-foreground/70 mt-2">
+                  Or add a new video using the form below
+                </p>
+              </motion.div>
             </div>
           )}
 
@@ -110,7 +127,7 @@ const PlayerSection = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowResumePrompt(false)}
+                      onClick={handleStartOver} // Use the new handler
                       className="flex-1"
                     >
                       Start Over
