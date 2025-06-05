@@ -1,7 +1,21 @@
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import { SunIcon, MoonIcon, MonitorIcon } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-const ThemeToggle = ({ theme, setTheme }) => {
+// Define default themes in case they're not passed as props
+const DEFAULT_THEMES = {
+  LIGHT: 'light',
+  DARK: 'dark',
+  SYSTEM: 'system'
+}
+
+const ThemeToggle = ({ theme, setTheme, themes = DEFAULT_THEMES }) => {
   const [mounted, setMounted] = useState(false)
   
   // Prevent hydration mismatch
@@ -9,47 +23,55 @@ const ThemeToggle = ({ theme, setTheme }) => {
     setMounted(true)
   }, [])
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
-
   if (!mounted) return null
 
+  const currentIcon = () => {
+    if (theme === themes.SYSTEM) {
+      return <MonitorIcon className="h-[1.2rem] w-[1.2rem]" />
+    } else if (theme === themes.DARK) {
+      return <MoonIcon className="h-[1.2rem] w-[1.2rem] text-yellow-300" />
+    } else {
+      return <SunIcon className="h-[1.2rem] w-[1.2rem] text-yellow-600" />
+    }
+  }
+
   return (
-    <button
-      onClick={toggleTheme}
-      className={cn(
-        "rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-ring",
-        "bg-secondary hover:bg-secondary/80 transition-all duration-300",
-        "relative overflow-hidden"
-      )}
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-    >
-      <span className={cn(
-        "absolute inset-0 flex items-center justify-center transition-all duration-500",
-        theme === 'dark' ? "opacity-100 transform-none" : "opacity-0 rotate-90 scale-0"
-      )}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-300">
-          <circle cx="12" cy="12" r="5" />
-          <line x1="12" y1="1" x2="12" y2="3" />
-          <line x1="12" y1="21" x2="12" y2="23" />
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-          <line x1="1" y1="12" x2="3" y2="12" />
-          <line x1="21" y1="12" x2="23" y2="12" />
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-        </svg>
-      </span>
-      <span className={cn(
-        "absolute inset-0 flex items-center justify-center transition-all duration-500",
-        theme === 'dark' ? "opacity-0 -rotate-90 scale-0" : "opacity-100 transform-none"
-      )}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-      </span>
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-ring",
+            "bg-secondary hover:bg-secondary/80 transition-all duration-300"
+          )}
+          aria-label="Select theme"
+        >
+          {currentIcon()}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme(themes.LIGHT)}>
+          <SunIcon className="mr-2 h-4 w-4" />
+          <span>Light</span>
+          {theme === themes.LIGHT && (
+            <span className="ml-auto text-xs text-primary">✓</span>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme(themes.DARK)}>
+          <MoonIcon className="mr-2 h-4 w-4" />
+          <span>Dark</span>
+          {theme === themes.DARK && (
+            <span className="ml-auto text-xs text-primary">✓</span>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme(themes.SYSTEM)}>
+          <MonitorIcon className="mr-2 h-4 w-4" />
+          <span>System</span>
+          {theme === themes.SYSTEM && (
+            <span className="ml-auto text-xs text-primary">✓</span>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

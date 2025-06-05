@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
+import { validateJsonVideos, parseTxtVideos, isValidURL, getNameFromUrl } from '@/utils/importValidation'
 
 const FileImport = ({ onImport }) => {
   const [error, setError] = useState('')
@@ -35,84 +36,33 @@ const FileImport = ({ onImport }) => {
     
     fileReader.onload = (event) => {
       try {
-        let parsedVideos = []
+        let result;
         
         if (file.name.endsWith('.json')) {
           // Handle JSON files
           const jsonContent = JSON.parse(event.target.result)
-          
-          // Validate JSON structure
-          if (!Array.isArray(jsonContent)) {
-            setError('Invalid JSON format: Expected an array of video objects. Example: [{"name":"Video 1","url":"https://example.com/video.mp4"}]')
-            return
-          }
-          
-          // Improve validation reporting
-          const validationErrors = [];
-          const validVideos = jsonContent.filter(video => {
-            if (typeof video !== 'object' || !video) {
-              validationErrors.push('Some items are not objects');
-              return false;
-            }
-            if (!video.url) {
-              validationErrors.push(`Missing URL for item with name: ${video.name || 'unnamed'}`);
-              return false;
-            }
-            if (!isValidURL(video.url)) {
-              validationErrors.push(`Invalid URL format: ${video.url}`);
-              return false;
-            }
-            return true;
-          });
-          
-          if (validVideos.length === 0) {
-            setError(`No valid videos found. Issues: ${validationErrors.slice(0, 3).join(', ')}${validationErrors.length > 3 ? '...' : ''}`);
-            return;
-          }
-          
-          // Show partial success warning
-          if (validVideos.length < jsonContent.length) {
-            setError(`Warning: Only ${validVideos.length} out of ${jsonContent.length} videos were valid. The valid ones were imported.`);
-          }
-          
-          parsedVideos = validVideos
+          result = validateJsonVideos(jsonContent)
         } else if (file.name.endsWith('.txt')) {
           // Handle TXT files
-          const content = event.target.result.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-          const entries = content.split(/\n(?=[^https?:\/\/])/).map(entry => entry.trim()).filter(Boolean)
-          
-          entries.forEach(entry => {
-            if (entry.includes(',')) {
-              // Format: name,url
-              const [name, ...urlParts] = entry.split(',')
-              const url = urlParts.join(',').trim()
-              
-              if (url && isValidURL(url)) {
-                parsedVideos.push({ name: name.trim() || getNameFromUrl(url), url })
-              }
-            } else {
-              // Try to parse as just a URL
-              const url = entry.trim()
-              if (isValidURL(url)) {
-                const name = getNameFromUrl(url)
-                parsedVideos.push({ name, url })
-              }
-            }
-          })
-          
-          if (parsedVideos.length === 0) {
-            setError('No valid videos found in the text file')
-            return
-          }
+          result = parseTxtVideos(event.target.result)
         } else {
           setError('Unsupported file format. Please upload .json or .txt files.')
           return
         }
         
-        onImport(parsedVideos)
-        setImportCount(prev => prev + parsedVideos.length)
-        
-        setError('')
+        if (result.success) {
+          onImport(result.videos)
+          setImportCount(prev => prev + result.videos.length)
+          
+          // Show warning if any
+          if (result.warning) {
+            setError(result.warning)
+          } else {
+            setError('')
+          }
+        } else {
+          setError(result.error)
+        }
       } catch (err) {
         console.error(err)
         setError('Error processing file: ' + err.message)
@@ -174,34 +124,6 @@ const FileImport = ({ onImport }) => {
     }
   }
   
-  const isValidURL = (string) => {
-    try {
-      new URL(string)
-      return true
-    } catch (_) {
-      return /^(https?|rtmp|rtsp):\/\/\S+/i.test(string.trim())
-    }
-  }
-  
-  const getNameFromUrl = (url) => {
-    try {
-      const urlObj = new URL(url)
-      let pathParts = urlObj.pathname.split('/')
-      // Remove empty parts and decode URI components
-      pathParts = pathParts.filter(Boolean).map(part => decodeURIComponent(part))
-      const lastPart = pathParts[pathParts.length - 1]
-      
-      // Remove file extensions and replace dashes/underscores with spaces
-      return (lastPart || 'Video')
-        .replace(/\.(mp4|webm|mov|avi|mkv|flv)$/i, '')
-        .replace(/[-_]/g, ' ')
-    } catch (_) {
-      const parts = url.split('/')
-      const lastPart = parts[parts.length - 1] || 'Video'
-      return lastPart.replace(/\.(mp4|webm|mov|avi|mkv|flv)$/i, '').replace(/[-_]/g, ' ')
-    }
-  }
-
   return (
     <div className="bg-card text-card-foreground rounded-lg shadow-md border border-border overflow-hidden">
       <Accordion type="single" collapsible defaultValue="item-1">
@@ -299,7 +221,19 @@ const FileImport = ({ onImport }) => {
                     <Input
                       type="file"
                       accept=".json,.txt"
-                      onChange={(e) => handleFileUpload(e.target.files)}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          
+                          if (!file.name.endsWith('.json') && !file.name.endsWith('.txt')) {
+                            setError('Unsupported file format. Please upload .json or .txt files.');
+                            e.target.value = ''; // Reset the input
+                            return;
+                          }
+                          
+                          handleFileUpload(e.target.files);
+                        }
+                      }}
                       className="hidden"
                       id="file-upload"
                     />

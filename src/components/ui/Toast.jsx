@@ -21,13 +21,14 @@ export const ToastProvider = ({ children }) => {
       {children}
       
       {/* Toast container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
         {toasts.map(toast => (
           <div 
             key={toast.id}
             className={cn(
               "p-3 rounded-md shadow-lg backdrop-blur-sm animate-in slide-in-from-right",
               "min-w-[200px] max-w-[300px] border",
+              "z-[100]", // Ensure highest z-index
               toast.type === 'success' && "bg-green-500/20 border-green-500 text-green-700 dark:text-green-200",
               toast.type === 'error' && "bg-red-500/20 border-red-500 text-red-700 dark:text-red-200",
               toast.type === 'default' && "bg-card/80 border-border text-foreground"
@@ -67,5 +68,9 @@ export const ToastProvider = ({ children }) => {
 }
 
 export const useToast = () => {
-  return useContext(ToastContext)
+  const context = useContext(ToastContext)
+  if (context === undefined) {
+    throw new Error('useToast must be used within a ToastProvider')
+  }
+  return context
 }

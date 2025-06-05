@@ -92,12 +92,12 @@
 
 /* Fix z-index issues */
 .plyr__controls {
-  z-index: 2 !important;
+  z-index: 5 !important;
 }
 
 /* Prevent tooltip conflicts */
 .plyr__tooltip {
-  z-index: 3 !important;
+  z-index: 10 !important;
 }
 
 /* Ensure Plyr fullscreen works properly */
@@ -121,6 +121,16 @@
 .video-player-container {
   isolation: isolate;
   position: relative;
+}
+
+/* Ensure video navigation controls are above Plyr controls */
+.video-navigation-controls {
+  z-index: 20 !important;
+}
+
+/* Error overlay should be above everything */
+.video-error-overlay {
+  z-index: 50 !important;
 }
 
 /* Fix tooltip styling */

@@ -25,20 +25,13 @@ export const saveVideos = (videos) => {
 }
 
 // Setup theme listener
-export const setupThemeListener = (setTheme) => {
+export const setupThemeListener = (callback) => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     // Define the handler function
     const handleThemeChange = (e) => {
-        // Only update if user hasn't set a preference manually
-        if (!localStorage.getItem('videoplayer_theme')) {
-            setTheme(e.matches ? 'dark' : 'light')
-        }
-    }
-
-    // Run once at the start to set initial theme based on system preference if no stored preference
-    if (!localStorage.getItem('videoplayer_theme')) {
-        setTheme(mediaQuery.matches ? 'dark' : 'light')
+        // Pass the dark mode preference to the callback
+        callback(e.matches)
     }
 
     // Add the event listener

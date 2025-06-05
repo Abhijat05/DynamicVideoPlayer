@@ -3,7 +3,7 @@ import ThemeToggle from './ThemeToggle'
 import { useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
 
-const Navbar = ({ theme, setTheme }) => {
+const Navbar = ({ theme, setTheme, themes }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { showToast } = useToast()
   
@@ -45,7 +45,7 @@ const Navbar = ({ theme, setTheme }) => {
           >
             Library
           </a>
-          <ThemeToggle theme={theme} setTheme={setTheme} />
+          <ThemeToggle theme={theme} setTheme={setTheme} themes={themes} />
         </div>
         
         {/* Mobile menu button */}
@@ -83,7 +83,7 @@ const Navbar = ({ theme, setTheme }) => {
             </a>
             <div className="flex justify-between items-center pt-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Toggle theme</span>
-              <ThemeToggle theme={theme} setTheme={setTheme} />
+              <ThemeToggle theme={theme} setTheme={setTheme} themes={themes} />
             </div>
           </div>
         </div>
