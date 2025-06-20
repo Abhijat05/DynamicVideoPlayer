@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './globals.css' // Import the new global styles
 import App from './App.jsx'
 
 // Get the initial theme from localStorage or default to 'system'

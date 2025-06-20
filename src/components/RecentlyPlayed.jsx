@@ -22,6 +22,36 @@ const RecentlyPlayed = ({ recentVideos, onVideoSelect, compact = false }) => {
 
   const displayVideos = compact ? recentVideos.slice(0, 3) : recentVideos;
 
+  // Add this function for 3D card effect to the component
+  const handleMouseMove = (event, cardRef) => {
+    if (!cardRef.current) return;
+    
+    const card = cardRef.current;
+    const rect = card.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const rotateX = (y - centerY) / 10;
+    const rotateY = (centerX - x) / 10;
+    
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    card.style.transition = "all 0.05s ease";
+  };
+  
+  const handleMouseLeave = (cardRef) => {
+    if (!cardRef.current) return;
+    
+    const card = cardRef.current;
+    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+    card.style.transition = "all 0.5s ease";
+  };
+  
+  // Create refs for each card
+  const cardRefs = recentVideos.map(() => React.useRef(null));
+  
   return (
     <div className="space-y-2">
       <div className={`space-y-2 ${!compact && "max-h-[350px] overflow-y-auto pr-1 -mr-1"}`}>
@@ -36,9 +66,13 @@ const RecentlyPlayed = ({ recentVideos, onVideoSelect, compact = false }) => {
               transition={{ delay: index * 0.03 }}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
+              ref={cardRefs[index]}
+              onMouseMove={(e) => handleMouseMove(e, cardRefs[index])}
+              onMouseLeave={() => handleMouseLeave(cardRefs[index])}
+              className="transform-gpu"
             >
               <Card
-                className="flex items-center gap-3 p-3 hover:bg-muted/30 cursor-pointer transition-all border-transparent hover:border-muted"
+                className="flex items-center gap-3 p-3 hover:bg-muted/30 cursor-pointer transition-all border-transparent hover:border-muted shadow-sm hover:shadow-md"
                 onClick={() => onVideoSelect(video)}
               >
                 <div className="w-10 h-10 bg-primary/10 flex items-center justify-center rounded-md flex-shrink-0 relative">

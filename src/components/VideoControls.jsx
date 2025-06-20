@@ -120,20 +120,36 @@ const VideoControls = ({ player, playing, onPlayPause, onSeek, duration, current
 
   return (
     <motion.div 
-      className="flex flex-col bg-card rounded-md shadow p-2"
+      className="flex flex-col backdrop-blur-md bg-card/80 rounded-md shadow-lg p-2 border border-white/10"
       initial={{ opacity: 0 }}
       animate={{ opacity: showControls ? 1 : 0.3 }}
       onMouseEnter={() => setShowControls(true)}
       transition={{ duration: 0.3 }}
     >
-      {/* Progress bar with animated fill */}
+      {/* Progress bar with enhanced animated fill */}
       <div className="mb-2 relative h-2 bg-muted rounded-lg overflow-hidden">
         <motion.div 
-          className="absolute top-0 left-0 h-full bg-primary rounded-lg"
+          className="absolute top-0 left-0 h-full rounded-lg"
           style={{ width: `${progress}%` }}
           initial={{ width: '0%' }}
-          animate={{ width: `${progress}%` }}
-          transition={{ type: "tween" }}
+          animate={{ 
+            width: `${progress}%`,
+            background: [
+              "linear-gradient(to right, hsl(var(--primary)), hsl(var(--chart-1)))",
+              "linear-gradient(to right, hsl(var(--chart-1)), hsl(var(--chart-2)))",
+              "linear-gradient(to right, hsl(var(--chart-2)), hsl(var(--primary)))"
+            ]
+          }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 120, 
+            damping: 20,
+            background: { 
+              duration: 3,
+              repeat: Infinity,
+              repeatType: "reverse" 
+            }
+          }}
         />
         <input 
           type="range"
@@ -167,18 +183,41 @@ const VideoControls = ({ player, playing, onPlayPause, onSeek, duration, current
             <SkipBack size={16} />
           </Button>
           
+          {/* Enhanced play/pause button with micro-interactions */}
           <Button
             size="sm"
             variant={playing ? "outline" : "default"}
             onClick={handlePlayPause}
-            className="rounded-full w-10 h-10"
+            className="rounded-full w-10 h-10 relative overflow-hidden"
             aria-label={playing ? 'Pause' : 'Play'}
           >
-            {playing ? (
-              <Pause size={18} />
-            ) : (
-              <Play size={18} />
-            )}
+            <motion.div
+              className="absolute inset-0 bg-primary/10 rounded-full"
+              initial={false}
+              animate={{ 
+                scale: playing ? [1, 1.3, 1] : 1 
+              }}
+              transition={{ 
+                duration: 0.5,
+                times: [0, 0.5, 1]
+              }}
+            />
+            <motion.div
+              animate={{ 
+                rotate: playing ? 0 : 180,
+                scale: [1, 0.8, 1]
+              }}
+              transition={{ 
+                duration: 0.4,
+                ease: "easeInOut"
+              }}
+            >
+              {playing ? (
+                <Pause size={18} />
+              ) : (
+                <Play size={18} />
+              )}
+            </motion.div>
           </Button>
           
           <Button
